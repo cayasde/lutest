@@ -7,3 +7,6 @@
 [submodule "vendor/luau"]
 	path = vendor/luau
 	url = https://github.com/luau-lang/luau.git
+[submodule "vendor/luau-lsp"]
+	path = vendor/luau-lsp
+	url = https://github.com/JohnnyMorganz/luau-lsp.git
