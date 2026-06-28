@@ -1,0 +1,9 @@
+[submodule "vendor/lute"]
+	path = vendor/lute
+	url = https://github.com/luau-lang/lute.git
+[submodule "vendor/cargo"]
+	path = vendor/cargo
+	url = https://github.com/rust-lang/cargo.git
+[submodule "vendor/luau"]
+	path = vendor/luau
+	url = https://github.com/luau-lang/luau.git
