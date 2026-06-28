@@ -2,19 +2,43 @@
 
 Lutest is a test runner for Luau code, with a focus on `luau`, `lute`, and Roblox runtimes.
 
-It runs tests against real runtime behavior instead of leaning on engine mocks for most validation.
+Key ideas:
 
-On Roblox, the long-term plan is to integrate with [Roblox Open Cloud Luau Execution](https://create.roblox.com/docs/cloud/reference/features/luau-execution) and use Luau session tasks to run tests in a headless Studio-style workflow for development and CI.
+- test kind and runtime should stay separate
+- tests should be able to live close to the module under test
+- internal or non-exported behavior should still be testable
+- public-only APIs or dependency injection should not be required just to make testing possible
 
-It should also support tests written close to the module under test, including internal or non-exported behavior, without forcing public-only APIs or dependency injection just to make testing possible. That is closer to how tests are commonly written in [Rust](https://rust-lang.org/) projects.
+That is closer to how tests are commonly written in [Rust](https://rust-lang.org/) projects.
+
+For Roblox specifically, the long-term plan is integration with [Roblox Open Cloud Luau Execution](https://create.roblox.com/docs/cloud/reference/features/luau-execution), using Luau session tasks to run tests in a headless Studio-style workflow for development and CI.
+
+## Scope
+
+Lutest should cover:
+
+- unit tests
+- integration tests
+- conformance tests
+- end-to-end tests
+
+The project is not intended to treat one of these as the only correct way to test Luau code.
+
+## Runtimes
+
+Current runtime targets:
+
+- `luau`
+- `lute`
+- Roblox runtimes
+
+It should also be possible to run the same test suite across different Luau-oriented runtimes when that is useful.
 
 ## Status
 
-Lutest will remain under constant change while the project is still in its early stages.
-
-Expect experimental work, and do not treat releases as final or stable yet.
-
-Breaking changes may happen in any release for now.
+- Lutest will remain under constant change while the project is still in its early stages.
+- Expect experimental work, and do not treat releases as final or stable yet.
+- Breaking changes may happen in any release for now.
 
 ## Setup
 
