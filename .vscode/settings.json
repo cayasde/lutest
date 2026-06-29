@@ -5,6 +5,13 @@
   "luau-lsp.fflags.override": {
     "LuauExportValueSyntax": "True",
     "LuauExportValueTypecheck": "True",
-    "LuauAutocompleteExport": "True"
-  }
+    "LuauAutocompleteExport": "True",
+    "LuauConst": "True"
+  },
+  "git.ignoredRepositories": [
+    "vendor/cargo",
+    "vendor/luau",
+    "vendor/luau-lsp",
+    "vendor/lute"
+  ]
 }
