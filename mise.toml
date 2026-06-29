@@ -3,3 +3,4 @@
 "github:luau-lang/luau" = "0.727"
 "github:JohnnyMorganz/luau-lsp" = "1.68.1"
 "github:pesde-pkg/pesde" = "0.7.3+registry.0.2.3"
+"github:JohnnyMorganz/StyLua" = "2.5.2"

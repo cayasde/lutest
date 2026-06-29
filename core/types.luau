@@ -16,8 +16,8 @@ export type TestResultMap = {
 }
 
 export type TestResultKind = keyof<TestResultMap>
-export type PassedTestResult = index<TestResultMap, "passed">
-export type FailedTestResult = index<TestResultMap, "failed">
+export type PassedTestResult = index<TestResultMap, 'passed'>
+export type FailedTestResult = index<TestResultMap, 'failed'>
 export type TestResult = index<TestResultMap, TestResultKind>
 
 export type TestSuite = {

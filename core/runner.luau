@@ -1,4 +1,4 @@
-const types = require("@core/types")
+const types = require '@core/types'
 
 export type TestSpec = types.TestSpec
 export type TestResult = types.TestResult
@@ -8,12 +8,10 @@ export type TestSuiteResult = types.TestSuiteResult
 const function run_test(test: TestSpec): TestResult
 	const ok, result = pcall(test.fn :: any)
 
-	if ok then
-		return {
-			name = test.name,
-			passed = true,
-		}
-	end
+	if ok then return {
+		name = test.name,
+		passed = true,
+	} end
 
 	return {
 		name = test.name,
