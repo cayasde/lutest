@@ -1,12 +1,12 @@
-local types = require("@core/types")
+const types = require("@core/types")
 
 export type TestSpec = types.TestSpec
 export type TestResult = types.TestResult
 export type TestSuite = types.TestSuite
 export type TestSuiteResult = types.TestSuiteResult
 
-local function run_test(test: TestSpec): TestResult
-	local ok, result = pcall(test.fn :: any)
+const function run_test(test: TestSpec): TestResult
+	const ok, result = pcall(test.fn :: any)
 
 	if ok then
 		return {
@@ -22,13 +22,13 @@ local function run_test(test: TestSpec): TestResult
 	}
 end
 
-local function run(suite: TestSuite): TestSuiteResult
-	local results = {} :: { TestResult }
-	local total_tests = #suite.tests
+const function run(suite: TestSuite): TestSuiteResult
+	const results = {} :: { TestResult }
+	const total_tests = #suite.tests
 	local passed = 0
 
 	for _, test in suite.tests do
-		local test_result = run_test(test)
+		const test_result = run_test(test)
 		table.insert(results, test_result)
 
 		if test_result.passed then

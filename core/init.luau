@@ -1,6 +1,6 @@
-local types = require("@self/types")
-local runner = require("@self/runner")
-local reporter = require("@self/reporter")
+const types = require("@self/types")
+const runner = require("@self/runner")
+const reporter = require("@self/reporter")
 
 export type TestSpec = types.TestSpec
 export type PassedTestResult = types.PassedTestResult
