@@ -12,6 +12,8 @@
     "vendor/cargo",
     "vendor/luau",
     "vendor/luau-lsp",
-    "vendor/lute"
+    "vendor/lute",
+    "vendor/tint",
+    "vendor/pesde"
   ]
 }
