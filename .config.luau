@@ -12,6 +12,7 @@ return {
 		aliases = {
 			lutest = '.',
 			core = 'core',
+			lib = 'lib',
 			runtimes = 'runtimes',
 			tests = 'tests',
 			packages = 'luau_packages',
