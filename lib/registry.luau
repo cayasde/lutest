@@ -3,42 +3,32 @@ const types = require '@core/types'
 export type TestSpec = types.TestSpec
 export type TestMode = types.TestMode
 
-type TestsByModule = { [string]: { TestSpec } }
-
-const tests_by_module = {} :: TestsByModule
+const active_tests = {} :: { TestSpec }
 local active = false
 
-const function begin()
+const function clear_active_tests()
+	while #active_tests > 0 do
+		table.remove(active_tests)
+	end
+end
+
+const function begin(_module_identity: string)
 	active = true
-
-	for module_identity in tests_by_module do
-		tests_by_module[module_identity] = nil
-	end
+	clear_active_tests()
 end
 
-const function register(module_identity: string, test: TestSpec)
+const function register(test: TestSpec)
 	if not active then return end
-
-	if tests_by_module[module_identity] == nil then
-		tests_by_module[module_identity] = {}
-	end
-
-	table.insert(tests_by_module[module_identity], test)
+	table.insert(active_tests, test)
 end
 
-const function collect(module_identity: string): { TestSpec }
-	const tests = tests_by_module[module_identity]
-	if tests == nil then return {} end
-
-	return tests
+const function collect(): { TestSpec }
+	return active_tests
 end
 
 const function clear()
 	active = false
-
-	for module_identity in tests_by_module do
-		tests_by_module[module_identity] = nil
-	end
+	clear_active_tests()
 end
 
 const function is_active(): boolean

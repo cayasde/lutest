@@ -4,28 +4,22 @@ const registry = require '@self/registry'
 export type TestSpec = types.TestSpec
 export type TestMode = types.TestMode
 
-const function normalize_module_identity(value: string): string
-	const normalized = value:gsub('\\', '/')
-	if normalized:sub(1, 1) == '@' then return normalized:sub(2) end
+const function get_runtime_register(): ((TestSpec) -> ())?
+	const candidate = (_G :: any).__lutest_register
+	if type(candidate) ~= 'function' then return nil end
 
-	return normalized
-end
-
-const function get_caller_module_identity(): string?
-	if not registry.is_active() then return nil end
-
-	const source = debug.info(2, 's')
-	if typeof(source) ~= 'string' then return nil end
-	if source == '' then return nil end
-
-	return normalize_module_identity(source)
+	return candidate
 end
 
 const function register_spec(spec: TestSpec)
-	const module_identity = get_caller_module_identity()
-	if module_identity == nil then return end
+	const runtime_register = get_runtime_register()
+	if runtime_register ~= nil then
+		runtime_register(spec)
+		return
+	end
 
-	registry.register(module_identity, spec)
+	if not registry.is_active() then return end
+	registry.register(spec)
 end
 
 const function test(name: string, fn: () -> ()): TestSpec

@@ -184,7 +184,7 @@ const function depends_on_test_lib(
 	end)
 
 	if not ok then
-		warn(
+		print(
 			`warning: failed to parse '{filepath}' during discovery: {parse_error}`
 		)
 		return false

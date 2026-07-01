@@ -101,7 +101,7 @@ const function assign_discovery_scalar(
 		error(`lutest.toml key '{key}' must be an array`)
 	end
 
-	warn(`warning: ignoring unsupported lutest.toml key '{key}'`)
+	print(`warning: ignoring unsupported lutest.toml key '{key}'`)
 end
 
 const function assign_discovery_array(
@@ -127,7 +127,7 @@ const function assign_discovery_array(
 		error(`lutest.toml key '{key}' must be a boolean`)
 	end
 
-	warn(`warning: ignoring unsupported lutest.toml key '{key}'`)
+	print(`warning: ignoring unsupported lutest.toml key '{key}'`)
 end
 
 const function parse_section_name(line: string): string?
@@ -216,7 +216,7 @@ const function parse_config(contents: string): LutestConfig
 
 			const key, value = parse_assignment(line)
 			if key == nil or value == nil then
-				warn(
+				print(
 					`warning: ignoring unsupported lutest.toml line '{line}'`
 				)
 				continue
