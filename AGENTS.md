@@ -6,6 +6,8 @@ Keep an eye on `vendor/luau-lsp/src/Plugin/README.md` as a reference for source 
 
 Treat the Luau LSP plugin system as a tooling and editor-workflow reference, not as the core architecture of `lutest`.
 
+Do not introduce metatables unless the user explicitly asks for them or they are genuinely necessary and the user has approved that specific use first.
+
 Do not create or expand project `*.spec.luau` tests for now.
 
 The project does not yet have its own stable test runner, so avoid introducing self-hosted tests or growing a project test suite at this stage.
