@@ -1,6 +1,6 @@
 const fs = require '@std/fs'
+const path_utils = require '@lutest/utils/path'
 const path = require '@std/path'
-const process = require '@std/process'
 const stringext = require '@std/stringext'
 
 export type LutestConfig = {
@@ -19,11 +19,6 @@ const DEFAULT_CONFIG = {
 	require = '@lib',
 	gitignore = true,
 } :: LutestConfig
-
-const function normalize_path(value: path.Pathlike): string
-	const formatted = path.format(path.normalize(value))
-	return (formatted:gsub('\\', '/'))
-end
 
 const function clone_strings(values: { string }): { string }
 	const cloned = {} :: { string }
@@ -242,9 +237,7 @@ const function parse_config(contents: string): LutestConfig
 end
 
 const function load_config(cwd: string?): LutestConfig
-	const resolved_cwd = if cwd == nil
-		then normalize_path(process.cwd())
-		else cwd
+	const resolved_cwd = if cwd == nil then path_utils.cwd() else cwd
 	const config_path = path.join(resolved_cwd, CONFIG_PATH)
 	if not fs.exists(config_path) then return default_config() end
 
@@ -261,7 +254,9 @@ const function load_config(cwd: string?): LutestConfig
 
 	if not ok then
 		error(
-			`failed to parse '{normalize_path(config_path)}': {parse_error}`,
+			`failed to parse '{path_utils.normalize_path(
+				config_path
+			)}': {parse_error}`,
 			0
 		)
 	end

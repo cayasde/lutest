@@ -1,7 +1,7 @@
 const config = require '@runtimes/lute/config'
+const path_utils = require '@lutest/utils/path'
 const fs = require '@std/fs'
 const path = require '@std/path'
-const process = require '@std/process'
 const query = require '@std/syntax/query'
 const stringext = require '@std/stringext'
 const syntax = require '@std/syntax'
@@ -23,11 +23,6 @@ const IGNORE_SEGMENTS = {
 	'luau_packages',
 	'vendor',
 }
-
-const function normalize_path(value: path.Pathlike): string
-	const formatted = path.format(path.normalize(value))
-	return (formatted:gsub('\\', '/'))
-end
 
 const function normalize_ignore_rule(line: string): string
 	const normalized = line:gsub('\\', '/')
@@ -59,7 +54,7 @@ const function matches_gitignore_rule(
 end
 
 const function relative_path_from_cwd(filepath: string, cwd: string): string
-	return normalize_path(path.relative(cwd, filepath))
+	return path_utils.normalize_path(path.relative(cwd, filepath))
 end
 
 const function load_gitignore_rules(cwd: string): GitignoreRules
@@ -228,8 +223,9 @@ const function walk_directory(
 	project_config: LutestConfig
 )
 	for _, entry in fs.listDirectory(directory) do
-		const entry_path =
-			normalize_path(path.join(directory, entry.name))
+		const entry_path = path_utils.normalize_path(
+			path.join(directory, entry.name)
+		)
 		if
 			should_prune(
 				entry_path,
@@ -277,10 +273,10 @@ end
 
 const function resolve_input_path(input_path: string, cwd: string): string
 	if path.isAbsolute(input_path) then
-		return normalize_path(input_path)
+		return path_utils.normalize_path(input_path)
 	end
 
-	return normalize_path(path.join(cwd, input_path))
+	return path_utils.normalize_path(path.join(cwd, input_path))
 end
 
 const function discover_path(
@@ -331,7 +327,7 @@ end
 const function discover_files(paths: { string }): { string }
 	const discovered = {} :: { string }
 	const seen = {} :: SeenMap
-	const cwd = normalize_path(process.cwd())
+	const cwd = path_utils.cwd()
 	const gitignore_rules = load_gitignore_rules(cwd)
 	const project_config = config.load_config(cwd)
 

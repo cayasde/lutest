@@ -1,34 +1,15 @@
 const core = require '@core'
 const discovery = require '@runtimes/lute/discovery'
+const path_utils = require '@lutest/utils/path'
 const fs = require '@std/fs'
 const luau = require '@std/luau'
 const path = require '@std/path'
-const process = require '@std/process'
 
 export type TestSpec = core.TestSpec
 export type TestSuite = core.TestSuite
 export type TestSuiteResult = core.TestSuiteResult
 type ModuleCache = { [string]: unknown }
 type LoadingMap = { [string]: boolean }
-
-const function normalize_path(value: path.Pathlike): string
-	const formatted = path.format(path.normalize(value))
-	return (formatted:gsub('\\', '/'))
-end
-
-const function resolve_module_path(module_path: string): string
-	const cwd = normalize_path(process.cwd())
-	const resolved = if path.isAbsolute(module_path)
-		then module_path
-		else path.join(cwd, module_path)
-
-	return normalize_path(resolved)
-end
-
-const function suite_name_from_module_path(module_path: string): string
-	const cwd = normalize_path(process.cwd())
-	return normalize_path(path.relative(cwd, module_path))
-end
 
 const function is_project_module(
 	resolved_path: string,
@@ -62,12 +43,12 @@ const function execute_module(
 	loading_modules[module_path] = true
 
 	const env = table.clone(_G :: any)
-	const project_root = normalize_path(process.cwd())
+	const project_root = path_utils.cwd()
 	env.__lutest_register = function(test: TestSpec)
 		table.insert(tests, test)
 	end
 	env.require = function(require_path: string)
-		const resolved_path = normalize_path(
+		const resolved_path = path_utils.normalize_path(
 			path.format(
 				luau.resolveModule(require_path, module_path)
 			)
@@ -122,13 +103,13 @@ end
 
 const function warn_missing_tests(module_path: string)
 	print(
-		`warning: module '{suite_name_from_module_path(module_path)}' depends on @lib but registered no tests`
+		`warning: module '{path_utils.relative_to_cwd(module_path)}' depends on @lib but registered no tests`
 	)
 end
 
 const function create_suite(module_path: string, tests: { TestSpec }): TestSuite
 	return {
-		name = suite_name_from_module_path(module_path),
+		name = path_utils.relative_to_cwd(module_path),
 		tests = tests,
 	}
 end
@@ -144,7 +125,7 @@ const function has_only_tests(suites: { TestSuite }): boolean
 end
 
 const function run_file(module_path: string): { TestSuiteResult }
-	const resolved_module_path = resolve_module_path(module_path)
+	const resolved_module_path = path_utils.resolve_from_cwd(module_path)
 	const _, tests = load_module(resolved_module_path)
 	if #tests == 0 then
 		warn_missing_tests(resolved_module_path)
@@ -159,7 +140,8 @@ const function run_files(paths: { string }): { TestSuiteResult }
 	const focus_only = false
 
 	for _, module_path in paths do
-		const resolved_module_path = resolve_module_path(module_path)
+		const resolved_module_path =
+			path_utils.resolve_from_cwd(module_path)
 		const _, tests = load_module(resolved_module_path)
 		if #tests == 0 then
 			warn_missing_tests(resolved_module_path)
