@@ -1,8 +1,8 @@
-luau_packages
-node_modules
+luau_packages/
+node_modules/
 .husky/_
 site/
 docs/.astro/
 docs/dist/
-dist
+dist/
 Packages/
