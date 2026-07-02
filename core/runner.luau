@@ -1,13 +1,34 @@
 const types = require '@core/types'
+const t = require '@lutest_release'
 
 export type TestSpec = types.TestSpec
 export type TestResult = types.TestResult
 export type TestSuite = types.TestSuite
 export type TestSuiteResult = types.TestSuiteResult
+export type FailedTestResult = types.FailedTestResult
 
 type RunOptions = {
 	focus_only: boolean,
 }
+
+const function runnable_test_spec(
+	name: string,
+	mode: 'run' | 'skip' | 'only',
+	fn: () -> ()
+): TestSpec
+	return {
+		name = name,
+		mode = mode,
+		fn = fn,
+	}
+end
+
+const function todo_test_spec(name: string): TestSpec
+	return {
+		name = name,
+		mode = 'todo',
+	}
+end
 
 const function has_only_tests(tests: { TestSpec }): boolean
 	for _, test in tests do
@@ -112,6 +133,153 @@ const function run(suite: TestSuite, options: RunOptions?): TestSuiteResult
 		results = results,
 	}
 end
+
+t.test('should focus on only tests', function()
+	local ran_non_only = false
+	local ran_only = false
+
+	const run_test_spec = runnable_test_spec('run test', 'run', function()
+		ran_non_only = true
+	end)
+
+	const only_test_spec = runnable_test_spec(
+		'only test',
+		'only',
+		function()
+			ran_only = true
+		end
+	)
+
+	const result = run {
+		name = 'suite',
+		tests = { run_test_spec, only_test_spec },
+	}
+
+	assert(ran_non_only == false)
+	assert(ran_only == true)
+	assert(result.results[1].kind == 'skipped')
+	assert(result.results[2].kind == 'passed')
+	assert(result.skipped_tests == 1)
+	assert(result.passed_tests == 1)
+end)
+
+t.test('should keep todo tests as todo under only focus', function()
+	const only_test_spec = runnable_test_spec(
+		'only test',
+		'only',
+		function() end
+	)
+
+	const todo_spec = todo_test_spec 'todo test'
+
+	const result = run {
+		name = 'suite',
+		tests = { only_test_spec, todo_spec },
+	}
+
+	assert(result.results[1].kind == 'passed')
+	assert(result.results[2].kind == 'todo')
+	assert(result.todo_tests == 1)
+end)
+
+t.test('should count mixed results correctly', function()
+	local ran_passed = false
+	local ran_skipped = false
+
+	const passed_test_spec = runnable_test_spec(
+		'passed test',
+		'run',
+		function()
+			ran_passed = true
+		end
+	)
+
+	const failed_test_spec = runnable_test_spec(
+		'failed test',
+		'run',
+		function(): ()
+			error 'boom'
+		end
+	)
+
+	const skipped_test_spec = runnable_test_spec(
+		'skipped test',
+		'skip',
+		function()
+			ran_skipped = true
+		end
+	)
+
+	const todo_spec = todo_test_spec 'todo test'
+
+	const tests = {
+		passed_test_spec,
+		failed_test_spec,
+		skipped_test_spec,
+		todo_spec,
+	}
+
+	const result = run({
+		name = 'suite',
+		tests = tests,
+	}, { focus_only = false })
+
+	assert(ran_passed == true)
+	assert(ran_skipped == false)
+	assert(result.total_tests == 4)
+	assert(result.passed_tests == 1)
+	assert(result.failed_tests == 1)
+	assert(result.skipped_tests == 1)
+	assert(result.todo_tests == 1)
+end)
+
+t.test('should preserve result order', function()
+	const first_test_spec = runnable_test_spec(
+		'first test',
+		'run',
+		function() end
+	)
+
+	const second_test_spec = runnable_test_spec(
+		'second test',
+		'skip',
+		function() end
+	)
+
+	const third_test_spec = todo_test_spec 'third test'
+
+	const result = run({
+		name = 'suite',
+		tests = { first_test_spec, second_test_spec, third_test_spec },
+	}, { focus_only = false })
+
+	assert(result.results[1].name == 'first test')
+	assert(result.results[1].kind == 'passed')
+	assert(result.results[2].name == 'second test')
+	assert(result.results[2].kind == 'skipped')
+	assert(result.results[3].name == 'third test')
+	assert(result.results[3].kind == 'todo')
+end)
+
+t.test('should capture thrown errors as failed results', function()
+	const failing_test_spec = runnable_test_spec(
+		'failing test',
+		'run',
+		function(): ()
+			error 'boom'
+		end
+	)
+
+	const result = run({
+		name = 'suite',
+		tests = { failing_test_spec },
+	}, { focus_only = false })
+
+	assert(result.results[1].kind == 'failed')
+	assert(result.failed_tests == 1)
+	const failed_result = result.results[1] :: FailedTestResult
+	assert(failed_result.error_message:find('boom', 1, true) ~= nil)
+end)
 
 return {
 	run = run,
