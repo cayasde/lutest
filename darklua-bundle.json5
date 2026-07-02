@@ -8,6 +8,7 @@
       aliases: {
         "@core": "./core",
         "@lib": "./lib",
+        "@lutest_release": "./lib",
         "@runtimes": "./runtimes",
         "@packages": "./luau_packages",
         "@lutest": ".",
