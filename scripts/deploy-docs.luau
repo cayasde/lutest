@@ -151,7 +151,7 @@ const function deploy(
 		worktree_path,
 		'commit',
 		'-m',
-		'docs(pages): sync manual deploy',
+		'docs(pages): sync site',
 	}, cwd)
 
 	run({
