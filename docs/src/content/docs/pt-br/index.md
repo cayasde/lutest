@@ -1,20 +1,37 @@
 ---
 title: Lutest
-description: Um test runner para projetos Luau, hoje centrado no runtime lute e em testes co-located.
+description: Um test runner para projetos Luau, construído em torno de testes co-located.
 ---
 
 Lutest é um test runner para projetos Luau.
 
-Hoje ele é voltado ao runtime `lute`. O trabalho dele é simples: deixar os testes perto do código que exercitam sem obrigar cada módulo a virar uma forma especial só para teste.
+O trabalho dele é simples: deixar os testes perto do código que cobrem sem obrigar cada módulo a virar uma forma especial só para teste.
 
 Este é o menor exemplo útil:
 
 ```luau
 local t = require("@lib")
 
-t.test("adds numbers", function()
-	assert(1 + 2 == 3)
+local function sum(a, b)
+	return a + b
+end
+
+t.test("should sum two numbers", function()
+	assert(sum(1, 2) == 3)
 end)
+
+return {
+	sum = sum,
+}
+```
+
+E uma execução desse módulo pode parecer assim:
+
+```text
+$ lutest .
+
+suite: src/sum.luau
+result: (OK); 1 tests, 1 passed, 0 failed, 0 skipped, 0 todo
 ```
 
 Quando você roda o Lutest, esse módulo é descoberto, carregado e tratado como uma suite.

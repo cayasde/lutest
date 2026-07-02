@@ -43,4 +43,4 @@ end)
 
 Esse é um ponto importante do modelo. O Lutest não te obriga a aprender uma segunda DSL de assertions antes de ficar produtivo.
 
-Mantenha os testes perto dos módulos que eles exercitam. Essa é a forma pretendida. Você não precisa de um layout obrigatório com `*.spec.luau` para fazer o sistema funcionar.
+Mantenha os testes perto dos módulos que eles cobrem. Essa é a forma pretendida. Você não precisa de um layout obrigatório com `*.spec.luau` para fazer o sistema funcionar.

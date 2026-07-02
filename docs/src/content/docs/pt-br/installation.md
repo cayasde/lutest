@@ -47,7 +47,13 @@ Se você quiser um setup reproduzível, fixe uma versão específica na configur
 
 ## Loom
 
-Hoje, se você quiser consumir o Lutest como package dentro de um projeto `lute`, o caminho prático é o Loom.
+Hoje, se você quiser usar o Lutest dentro de um projeto `lute`, o caminho prático é o Loom.
+
+Essa parte não é opcional.
+
+Instalar a CLI do Lutest por um toolchain manager te dá a ferramenta de linha de comando, mas o projeto ainda precisa da dependency do package do Lutest.
+
+É esse package que a CLI usa para identificar módulos de teste durante o discovery.
 
 `pesde` e `wally` não encaixam bem no formato atual do Lutest, então este projeto usa o fluxo de package do próprio `lute`.
 
@@ -77,5 +83,7 @@ lute pkg install
 ```
 
 Isso gera `loom.lock.luau` e instala a dependency em `Packages/`.
+
+Sem essa dependency do package dentro do projeto, o Lutest não tem o path configurado da test library para procurar, então seus módulos de teste não vão ser descobertos da forma pretendida.
 
 Quando você quiser ir para uma release mais nova, troque `rev` para a nova tag e rode `lute pkg install` de novo.

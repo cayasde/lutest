@@ -43,4 +43,4 @@ end)
 
 That is an important part of the model. Lutest does not ask you to learn a second assertion DSL before you can be productive.
 
-Keep tests next to the modules they exercise. That is the intended shape. You do not need a mandatory `*.spec.luau` layout to make the system work.
+Keep tests next to the modules they cover. That is the intended shape. You do not need a mandatory `*.spec.luau` layout to make the system work.

@@ -47,7 +47,13 @@ If you want a reproducible setup, pin a specific version in your toolchain confi
 
 ## Loom
 
-Today, if you want to consume Lutest as a package inside a `lute` project, the practical path is Loom.
+Today, if you want to use Lutest inside a `lute` project, the practical path is Loom.
+
+This part is not optional.
+
+Installing the Lutest CLI through a toolchain manager gives you the command-line tool, but your project still needs the Lutest package dependency.
+
+That package is what the CLI uses to identify test modules during discovery.
 
 `pesde` and `wally` are not a good fit for Lutest in its current shape, so this project uses `lute`'s own package flow instead.
 
@@ -77,5 +83,7 @@ lute pkg install
 ```
 
 That creates `loom.lock.luau` and installs the dependency into `Packages/`.
+
+Without that package dependency in the project, Lutest has no configured test library path to look for, so your test modules will not be discovered the intended way.
 
 When you want to move to a newer release later, update `rev` to the new tag and run `lute pkg install` again.
