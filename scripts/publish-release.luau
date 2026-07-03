@@ -180,8 +180,8 @@ const function version_replacements(
 		},
 		{
 			path = 'loom.lock.luau',
-			needle = `packages = { 'lutest@{current_tag}' }`,
-			replacement = `packages = { 'lutest@{next_tag}' }`,
+			needle = `packages = { 'lutest@{current_tag}' },`,
+			replacement = `packages = { 'lutest@{next_tag}' },`,
 		},
 		{
 			path = 'docs/src/content/docs/installation.md',
