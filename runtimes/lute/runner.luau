@@ -1,6 +1,7 @@
 const core = require '@core'
 const config = require '@runtimes/lute/config'
 const discovery = require '@runtimes/lute/discovery'
+const t = require '@lutest_release'
 const path_utils = require '@lutest/utils/path'
 const fs = require '@std/fs'
 const luau = require '@std/luau'
@@ -12,6 +13,9 @@ export type TestSuiteResult = core.TestSuiteResult
 type LutestConfig = config.LutestConfig
 type ModuleCache = { [string]: unknown }
 type LoadingMap = { [string]: boolean }
+type ExecutionState = {
+	current_module: string?,
+}
 
 const function is_project_module(
 	resolved_path: string,
@@ -32,9 +36,11 @@ end
 
 const function execute_module(
 	module_path: string,
+	suite_module_path: string,
 	tests: { TestSpec },
 	module_cache: ModuleCache,
 	loading_modules: LoadingMap,
+	execution_state: ExecutionState,
 	project_config: LutestConfig
 ): unknown
 	if module_cache[module_path] ~= nil then
@@ -52,6 +58,9 @@ const function execute_module(
 	const env = table.clone(_G :: any)
 	const project_root = path_utils.cwd()
 	env.__lutest_register = function(test: TestSpec)
+		if execution_state.current_module ~= suite_module_path then
+			return
+		end
 		table.insert(tests, test)
 	end
 	env._G = env
@@ -59,9 +68,11 @@ const function execute_module(
 		if require_path == project_config.require then
 			return execute_module(
 				test_lib_module_path(project_root),
+				suite_module_path,
 				tests,
 				module_cache,
 				loading_modules,
+				execution_state,
 				project_config
 			)
 		end
@@ -69,13 +80,14 @@ const function execute_module(
 		const resolved_ok, resolved_result = pcall(function()
 			return path_utils.normalize_path(
 				path.format(
-					luau.resolveModule(require_path, module_path)
+					luau.resolveModule(
+						require_path,
+						module_path
+					)
 				)
 			)
 		end)
-		if not resolved_ok then
-			return (require)(require_path)
-		end
+		if not resolved_ok then return (require)(require_path) end
 
 		const resolved_path = resolved_result :: string
 		if not is_project_module(resolved_path, project_root) then
@@ -84,20 +96,30 @@ const function execute_module(
 
 		return execute_module(
 			resolved_path,
+			suite_module_path,
 			tests,
 			module_cache,
 			loading_modules,
+			execution_state,
 			project_config
 		)
 	end
 
 	const ok, result = xpcall(function()
+		const previous_module = execution_state.current_module
+		execution_state.current_module = module_path
 		const source = fs.readFileToString(module_path)
 		const chunk = luau.load(luau.compile(source), module_path, env)
-		return chunk()
+		const chunk_result = chunk()
+		execution_state.current_module = previous_module
+		return chunk_result
 	end, function(err)
 		return err
 	end)
+
+	if execution_state.current_module == module_path then
+		execution_state.current_module = nil
+	end
 
 	loading_modules[module_path] = nil
 	if not ok then error(result, 0) end
@@ -113,13 +135,18 @@ const function load_module(
 	const tests = {} :: { TestSpec }
 	const module_cache = {} :: ModuleCache
 	const loading_modules = {} :: LoadingMap
+	const execution_state = {
+		current_module = nil,
+	} :: ExecutionState
 
 	const ok, result = xpcall(function()
 		return execute_module(
 			module_path,
+			module_path,
 			tests,
 			module_cache,
 			loading_modules,
+			execution_state,
 			project_config
 		)
 	end, function(err)
@@ -176,7 +203,8 @@ const function run_files(paths: { string }): { TestSuiteResult }
 	for _, module_path in paths do
 		const resolved_module_path =
 			path_utils.resolve_from_cwd(module_path)
-		const _, tests = load_module(resolved_module_path, project_config)
+		const _, tests =
+			load_module(resolved_module_path, project_config)
 		if #tests == 0 then
 			warn_missing_tests(resolved_module_path, project_config)
 			continue
@@ -203,6 +231,63 @@ end
 const function run_discovered(paths: { string }): { TestSuiteResult }
 	return run_files(discovery.discover_files(paths))
 end
+
+t.test('should not register tests from required dependencies', function()
+	const temp_root =
+		path_utils.resolve_path(path_utils.cwd(), 'dist/test-tmp')
+	const temp_cwd =
+		path_utils.resolve_path(temp_root, 'runner-dependency-tests')
+	const suite_path =
+		path_utils.normalize_path(path.join(temp_cwd, 'suite.luau'))
+	const dependency_path = path_utils.normalize_path(
+		path.join(temp_cwd, 'dependency.luau')
+	)
+
+	if fs.exists(temp_cwd) then
+		fs.removeDirectory(temp_cwd, { recursive = true })
+	end
+
+	fs.createDirectory(temp_cwd, { makeParents = true })
+	fs.writeStringToFile(
+		dependency_path,
+		[[
+local t = require("@lutest_release")
+
+t.test("dependency test", function()
+	error("dependency test should not run")
+end)
+
+return {
+	value = 41,
+}
+]]
+	)
+	fs.writeStringToFile(
+		suite_path,
+		[[
+local dependency = require("./dependency")
+local t = require("@lutest_release")
+
+t.test("suite test", function()
+	assert(dependency.value == 41)
+end)
+
+return dependency
+]]
+	)
+
+	const _, tests = load_module(suite_path, {
+		roots = { '.' },
+		ignore = {},
+		require = '@lutest_release',
+		gitignore = true,
+	})
+
+	assert(#tests == 1)
+	assert(tests[1].name == 'suite test')
+
+	fs.removeDirectory(temp_cwd, { recursive = true })
+end)
 
 return {
 	run_file = run_file,
