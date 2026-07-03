@@ -10,37 +10,26 @@ const DEFAULT_BINARY_OUTPUT = if system.win32
 	then 'dist/lutest.exe'
 	else 'dist/lutest'
 const DEFAULT_CONFIG = 'darklua-bundle.json5'
-const DARKLUA_WINDOWS_PATH = 'vendor/darklua/target/debug/darklua.exe'
-const DARKLUA_UNIX_PATH = 'vendor/darklua/target/debug/darklua'
+const DEFAULT_DARKLUA_COMMAND = 'darklua'
 
-const function darklua_binary_path(cwd: string): string
-	const candidate = if system.win32
-		then DARKLUA_WINDOWS_PATH
-		else DARKLUA_UNIX_PATH
-	return path_utils.resolve_path(cwd, candidate)
+const function resolve_darklua_command(): string
+	const from_env = process.env.DARKLUA_BIN
+	if type(from_env) == 'string' and from_env ~= '' then
+		return from_env
+	end
+	return DEFAULT_DARKLUA_COMMAND
 end
 
-const function build_darklua_if_needed(cwd: string): string
-	const binary_path = darklua_binary_path(cwd)
-	if fs.exists(binary_path) then return binary_path end
-
-	const result = process.run({
-		'cargo',
-		'build',
-		'--manifest-path',
-		path_utils.resolve_path(cwd, 'vendor/darklua/Cargo.toml'),
-	}, {
+const function ensure_darklua_available(cwd: string, command: string)
+	const result = process.run({ command, '--version' }, {
 		cwd = cwd,
-		stdio = 'inherit',
 	})
+	if result.exitcode == 0 then return end
 
-	if result.exitcode ~= 0 then process.exit(result.exitcode) end
-
-	if not fs.exists(binary_path) then
-		error(`missing darklua binary '{binary_path}' after build`, 0)
-	end
-
-	return binary_path
+	error(
+		`missing darklua executable '{command}'. Install darklua and expose it on PATH, or set DARKLUA_BIN to its full path.`,
+		0
+	)
 end
 
 const function bundle_entry(
@@ -61,9 +50,10 @@ const function bundle_entry(
 		path_utils.normalize_path(path.dirname(bundle_path))
 	)
 
-	const darklua_path = build_darklua_if_needed(cwd)
+	const darklua_command = resolve_darklua_command()
+	ensure_darklua_available(cwd, darklua_command)
 	const result = process.run({
-		darklua_path,
+		darklua_command,
 		'process',
 		entry_path,
 		bundle_path,
