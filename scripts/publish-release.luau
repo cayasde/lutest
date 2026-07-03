@@ -113,10 +113,13 @@ const function replace_once(
 	replacement: string,
 	label: string
 ): string
-	const pattern =
-		string.gsub(needle, '([%(%)%.%%%+%-%*%?%[%]%^%$])', '%%%1')
-	const updated, count = string.gsub(contents, pattern, replacement, 1)
-	if count == 1 then return updated end
+	const start_index = string.find(contents, needle, 1, true)
+	if start_index ~= nil then
+		const end_index = start_index + string.len(needle)
+		return string.sub(contents, 1, start_index - 1)
+			.. replacement
+			.. string.sub(contents, end_index)
+	end
 
 	error(`failed to update {label}`, 0)
 end
