@@ -16,14 +16,6 @@ type LoadingMap = { [string]: boolean }
 type ExecutionState = {
 	current_module: string?,
 }
-type RuntimeContextModule = {
-	set_register: ((TestSpec) -> ()) -> (),
-	clear_register: () -> (),
-}
-
-const CONTEXT_PATH = path_utils.normalize_path(
-	path.join(path_utils.cwd(), 'lib/context.luau')
-)
 
 const function is_project_module(
 	resolved_path: string,
@@ -110,19 +102,6 @@ const function execute_module(
 		)
 	end
 
-	if module_path == suite_module_path and module_path ~= CONTEXT_PATH then
-		const context = execute_module(
-			CONTEXT_PATH,
-			suite_module_path,
-			tests,
-			module_cache,
-			loading_modules,
-			execution_state,
-			project_config
-		) :: RuntimeContextModule
-		context.set_register(env.__lutest_register)
-	end
-
 	const ok, result = xpcall(function()
 		const previous_module = execution_state.current_module
 		execution_state.current_module = module_path
@@ -134,12 +113,6 @@ const function execute_module(
 	end, function(err)
 		return err
 	end)
-
-	if module_path == suite_module_path and module_path ~= CONTEXT_PATH then
-		const context =
-			module_cache[CONTEXT_PATH] :: RuntimeContextModule?
-		if context ~= nil then context.clear_register() end
-	end
 
 	if execution_state.current_module == module_path then
 		execution_state.current_module = nil
@@ -333,9 +306,7 @@ t.test('should respect the configured test lib require path', function()
 		test_lib_path,
 		[[
 local function test(name, fn)
-	local context = require("@lib/context")
-
-	context.register({
+	_G.__lutest_register({
 		name = name,
 		mode = "run",
 		fn = fn,
