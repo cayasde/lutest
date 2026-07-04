@@ -30,10 +30,6 @@ const function format_load_error(module_path: string, err: unknown): string
 	return debug.traceback(message, 2)
 end
 
-const function test_lib_module_path(project_root: string): string
-	return path_utils.resolve_path(project_root, 'lib/init.luau')
-end
-
 const function execute_module(
 	module_path: string,
 	suite_module_path: string,
@@ -65,18 +61,6 @@ const function execute_module(
 	end
 	env._G = env
 	env.require = function(require_path: string)
-		if require_path == project_config.require then
-			return execute_module(
-				test_lib_module_path(project_root),
-				suite_module_path,
-				tests,
-				module_cache,
-				loading_modules,
-				execution_state,
-				project_config
-			)
-		end
-
 		const resolved_ok, resolved_result = pcall(function()
 			return path_utils.normalize_path(
 				path.format(
@@ -283,6 +267,66 @@ return dependency
 		gitignore = true,
 	})
 
+	assert(#tests == 1)
+	assert(tests[1].name == 'suite test')
+
+	fs.removeDirectory(temp_cwd, { recursive = true })
+end)
+
+t.test('should respect the configured test lib require path', function()
+	const temp_root =
+		path_utils.resolve_path(path_utils.cwd(), 'dist/test-tmp')
+	const temp_cwd =
+		path_utils.resolve_path(temp_root, 'runner-custom-test-lib')
+	const suite_path =
+		path_utils.normalize_path(path.join(temp_cwd, 'suite.luau'))
+	const test_lib_path = path_utils.normalize_path(
+		path.join(temp_cwd, 'custom-test-lib.luau')
+	)
+
+	if fs.exists(temp_cwd) then
+		fs.removeDirectory(temp_cwd, { recursive = true })
+	end
+
+	fs.createDirectory(temp_cwd, { makeParents = true })
+	fs.writeStringToFile(
+		test_lib_path,
+		[[
+local function test(name, fn)
+	_G.__lutest_register({
+		name = name,
+		mode = "run",
+		fn = fn,
+	})
+end
+
+return {
+	version = "custom",
+	test = test,
+}
+]]
+	)
+	fs.writeStringToFile(
+		suite_path,
+		[[
+local t = require("./custom-test-lib")
+
+t.test("suite test", function()
+	assert(t.version == "custom")
+end)
+
+return t.version
+]]
+	)
+
+	const result, tests = load_module(suite_path, {
+		roots = { '.' },
+		ignore = {},
+		require = './custom-test-lib',
+		gitignore = true,
+	})
+
+	assert(result == 'custom')
 	assert(#tests == 1)
 	assert(tests[1].name == 'suite test')
 
