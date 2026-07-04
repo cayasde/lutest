@@ -8,6 +8,8 @@ Treat the Luau LSP plugin system as a tooling and editor-workflow reference, not
 
 Do not add `--!strict` headers to project Luau files unless a specific file genuinely needs an explicit override; the project manifest already enforces strict mode.
 
+Prefer low-nesting code. Flatten control flow aggressively with early returns, small helpers, and extracted fixtures when that keeps behavior unchanged. Avoid deeply nested conditionals, loops, and test fixtures unless there is a clear payoff.
+
 Do not introduce metatables unless the user explicitly asks for them or they are genuinely necessary and the user has approved that specific use first.
 
 Do not make project scripts depend on the internal checkout layout of `vendor` or on uninitialized submodules unless the script is explicitly maintainer-only and that constraint is documented in the script and user-facing docs.
