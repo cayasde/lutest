@@ -1,5 +1,5 @@
 [discovery]
 require = "@lutest_release"
 roots = ["."]
-ignore = ["vendor", "luau_packages", ".git"]
+ignore = ["vendor", "luau_packages", ".git", "dist/test-tmp"]
 gitignore = true
