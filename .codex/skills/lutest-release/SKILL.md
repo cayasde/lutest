@@ -56,6 +56,8 @@ The minimum smoke test is the repository's current release check:
 
 Treat a passing smoke test as mandatory. Do not upload an untested asset.
 
+If the release intentionally changes the test-registration contract or drops backward compatibility with an older host path, do not treat failure against that legacy contract as an automatic release blocker. In that case, replace or supplement the smoke test with one that validates the new intended contract of the release candidate and report the compatibility break explicitly to the user.
+
 ## Repository-Specific Notes
 
 - `scripts/release.luau` is the build step.

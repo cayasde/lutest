@@ -72,7 +72,6 @@ const function execute_module(
 		execution_state,
 		suite_module_path
 	)
-	env._G = env
 	env.require = function(require_path: string)
 		const resolved_ok, resolved_result = pcall(function()
 			return path_utils.normalize_path(
@@ -236,6 +235,9 @@ t.test('should not register tests from required dependencies', function()
 		path_utils.resolve_path(temp_root, 'runner-dependency-tests')
 	const suite_path =
 		path_utils.normalize_path(path.join(temp_cwd, 'suite.luau'))
+	const test_lib_path = path_utils.normalize_path(
+		path.join(temp_cwd, 'custom-test-lib.luau')
+	)
 	const dependency_path = path_utils.normalize_path(
 		path.join(temp_cwd, 'dependency.luau')
 	)
@@ -246,9 +248,25 @@ t.test('should not register tests from required dependencies', function()
 
 	fs.createDirectory(temp_cwd, { makeParents = true })
 	fs.writeStringToFile(
+		test_lib_path,
+		[[
+local function test(name, fn)
+	__lutest_register({
+		name = name,
+		mode = "run",
+		fn = fn,
+	})
+end
+
+return {
+	test = test,
+}
+]]
+	)
+	fs.writeStringToFile(
 		dependency_path,
 		[[
-local t = require("@lutest_release")
+local t = require("./custom-test-lib")
 
 t.test("dependency test", function()
 	error("dependency test should not run")
@@ -263,7 +281,7 @@ return {
 		suite_path,
 		[[
 local dependency = require("./dependency")
-local t = require("@lutest_release")
+local t = require("./custom-test-lib")
 
 t.test("suite test", function()
 	assert(dependency.value == 41)
@@ -276,7 +294,7 @@ return dependency
 	const _, tests = load_module(suite_path, {
 		roots = { '.' },
 		ignore = {},
-		require = '@lutest_release',
+		require = './custom-test-lib',
 		gitignore = true,
 	})
 
@@ -306,7 +324,7 @@ t.test('should respect the configured test lib require path', function()
 		test_lib_path,
 		[[
 local function test(name, fn)
-	_G.__lutest_register({
+	__lutest_register({
 		name = name,
 		mode = "run",
 		fn = fn,

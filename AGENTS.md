@@ -12,6 +12,8 @@ Treat Lutest as self-hosted through the stable release locked by the local toolc
 
 Prioritize `lutest .` over `lute run cli/init.luau .` when judging whether a change is acceptable. Do not classify odd behavior in `lute run cli/init.luau .` as a product bug by default, and do not change architecture, bootstrap flow, or runner responsibilities just to make that path behave like a first-class supported flow unless the user explicitly asks for it.
 
+When evaluating a release candidate, do not reject the new binary solely because it is incompatible with a previous test-registration contract if that break is intentional. Smoke tests must validate the contract of the release being prepared, not silently reimpose legacy compatibility as a hidden release gate.
+
 Do not hardcode source-tree modules, bootstrap helpers, or special-case source paths into the stable runner to accommodate current-source execution. If that seems necessary, stop and ask first.
 
 Do not introduce metatables unless the user explicitly asks for them or has approved that specific use first.
