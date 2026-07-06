@@ -13,6 +13,7 @@ export type TestSpec = core.TestSpec
 export type TestSuite = core.TestSuite
 export type TestSuiteResult = core.TestSuiteResult
 type LutestConfig = config.LutestConfig
+type ReleaseApi = typeof(t)
 type ModuleCache = { [string]: unknown }
 type LoadingMap = { [string]: boolean }
 type ExecutionState = {
@@ -41,7 +42,7 @@ const function should_use_embedded_release_api(
 	return string.sub(require_path, 1, 1) == '@'
 end
 
-const function create_embedded_release_api()
+const function create_embedded_release_api(): ReleaseApi
 	const function register_spec(spec: TestSpec)
 		if context.register(spec) then return end
 		if not registry.is_active() then return end
@@ -100,7 +101,7 @@ const function create_embedded_release_api()
 	}
 end
 
-const embedded_release_api = create_embedded_release_api()
+const embedded_release_api: ReleaseApi = create_embedded_release_api()
 
 const function create_runtime_register(
 	tests: { TestSpec },
@@ -144,7 +145,7 @@ const function execute_module(
 		execution_state,
 		suite_module_path
 	)
-	env.require = function(require_path: string)
+	env.require = function(require_path: string): unknown
 		if
 			should_use_embedded_release_api(
 				require_path,

@@ -33,7 +33,7 @@ const STAGING_SKIP_SEGMENTS = {
 
 const function normalize_path(value: path.Pathlike): string
 	const formatted = path.format(path.normalize(value))
-	return formatted:gsub('\\', '/')
+	return (formatted:gsub('\\', '/'))
 end
 
 const function current_working_directory(): string
@@ -58,9 +58,8 @@ end
 const function tool_path(cwd: string, absolute_path: string): string
 	const normalized_cwd = normalize_path(cwd)
 	const normalized_path = normalize_path(absolute_path)
-	const relative_path = normalize_path(
-		path.relative(normalized_cwd, normalized_path)
-	)
+	const relative_path =
+		normalize_path(path.relative(normalized_cwd, normalized_path))
 
 	if relative_path == '' then return '.' end
 	if string.sub(relative_path, 1, 2) == '..' then
@@ -93,8 +92,7 @@ const function load_project_aliases(cwd: string): { [string]: unknown }
 end
 
 const function path_within_root(root: string, absolute_path: string): string?
-	const relative_path =
-		normalize_path(path.relative(root, absolute_path))
+	const relative_path = normalize_path(path.relative(root, absolute_path))
 	if relative_path == '' then return '.' end
 	if string.sub(relative_path, 1, 2) == '..' then return nil end
 
@@ -139,8 +137,10 @@ const function copy_directory_recursive(source_dir: string, dest_dir: string)
 	for _, entry in fs.listDirectory(source_dir) do
 		if should_skip_staging_entry(entry.name) then continue end
 
-		const source_path = path.join(source_dir, entry.name)
-		const dest_path = path.join(dest_dir, entry.name)
+		const source_path =
+			normalize_path(path.join(source_dir, entry.name))
+		const dest_path =
+			normalize_path(path.join(dest_dir, entry.name))
 
 		if entry.type == 'dir' then
 			copy_directory_recursive(source_path, dest_path)
@@ -222,6 +222,33 @@ const function matches_release_self_test_call(
 	return RELEASE_SELF_TEST_METHODS[method_access.index.text] == true
 end
 
+const function collect_self_test_replacements(
+	ast: syntax.ParseResult,
+	lutest_release_locals: { [string]: boolean }
+): any
+	const matches = query.findAllFromRoot(ast, is_stat_expr)
+		:filter(function(node)
+			return matches_release_self_test_call(
+				node,
+				lutest_release_locals
+			)
+		end)
+
+	return matches:replace(function()
+		return ''
+	end)
+end
+
+const function count_remaining_local_uses(
+	ast: syntax.ParseResult,
+	local_name: string
+): number
+	return #query.findAllFromRoot(ast, syntax_utils.isExprLocal)
+		:filter(function(local_ref)
+			return local_ref['local'].name.text == local_name
+		end).nodes
+end
+
 const function strip_release_self_tests(source: string): string
 	local current_source = source
 
@@ -233,35 +260,24 @@ const function strip_release_self_tests(source: string): string
 			return current_source
 		end
 
-		const self_test_replacements = query.findAllFromRoot(
+		const self_test_replacements = collect_self_test_replacements(
 			ast,
-			function(node)
-				return if matches_release_self_test_call(
-						node,
-						lutest_release_locals
-					)
-					then node
-					else nil
-			end
+			lutest_release_locals
 		)
-			:replace(function()
-				return ''
-			end)
 
 		if next(self_test_replacements) == nil then
-			local require_replacements = {} :: syntax.Replacements
+			local require_replacements = {} :: any
 
 			for _, stat in collect_lutest_release_locals(ast) do
 				const local_name =
 					stat.variables[1].node.name.text
-				const remaining_local_uses = query
-					.findAllFromRoot(ast, syntax_utils.isExprLocal)
-					:filter(function(local_ref)
-						return local_ref['local'].name.text
-							== local_name
-					end).nodes
+				const remaining_local_uses =
+					count_remaining_local_uses(
+						ast,
+						local_name
+					)
 
-				if #remaining_local_uses == 0 then
+				if remaining_local_uses == 0 then
 					require_replacements[stat] = ''
 				end
 			end
@@ -291,7 +307,8 @@ const function strip_release_self_tests_in_tree(root_dir: string)
 	for _, entry in fs.listDirectory(root_dir) do
 		if should_skip_staging_entry(entry.name) then continue end
 
-		const entry_path = path.join(root_dir, entry.name)
+		const entry_path =
+			normalize_path(path.join(root_dir, entry.name))
 		if entry.type == 'dir' then
 			strip_release_self_tests_in_tree(entry_path)
 			continue
@@ -305,8 +322,7 @@ const function strip_release_self_tests_in_tree(root_dir: string)
 end
 
 const function create_release_staging(project_root: string): string
-	const staging_root =
-		resolve_path(project_root, RELEASE_STAGING_ROOT)
+	const staging_root = resolve_path(project_root, RELEASE_STAGING_ROOT)
 	remove_path(staging_root)
 	copy_directory_recursive(project_root, staging_root)
 	strip_release_self_tests_in_tree(staging_root)
@@ -345,11 +361,10 @@ const function create_darklua_config(cwd: string, config_path: string): string
 		LUTEST_RELEASE_ALIAS_PLACEHOLDER,
 		to_darklua_alias(lutest_release_alias)
 	)
-	const generated_config_path =
-		resolve_path(cwd, GENERATED_CONFIG)
+	const generated_config_path = resolve_path(cwd, GENERATED_CONFIG)
 
 	ensure_directory(
-		normalize_path(path.dirname(generated_config_path))
+		normalize_path(path.format(path.dirname(generated_config_path)))
 	)
 	fs.writeStringToFile(generated_config_path, generated_source)
 
@@ -378,9 +393,7 @@ const function bundle_entry(
 		error(`missing entry module '{entry_path}'`, 0)
 	end
 
-	ensure_directory(
-		normalize_path(path.dirname(bundle_path))
-	)
+	ensure_directory(normalize_path(path.format(path.dirname(bundle_path))))
 
 	const darklua_command = resolve_darklua_command()
 	ensure_darklua_available(cwd, darklua_command)
@@ -411,9 +424,7 @@ const function compile_bundle(
 		error(`missing bundled entry '{bundle_path}'`, 0)
 	end
 
-	ensure_directory(
-		normalize_path(path.dirname(binary_path))
-	)
+	ensure_directory(normalize_path(path.format(path.dirname(binary_path))))
 
 	if fs.exists(binary_path) then fs.remove(binary_path) end
 
@@ -434,12 +445,9 @@ const function compile_bundle(
 end
 
 const cwd = current_working_directory()
-const entry_path =
-	resolve_path(cwd, process.args[2] or DEFAULT_ENTRY)
-const bundle_path =
-	resolve_path(cwd, process.args[3] or DEFAULT_BUNDLE_OUTPUT)
-const binary_path =
-	resolve_path(cwd, process.args[4] or DEFAULT_BINARY_OUTPUT)
+const entry_path = resolve_path(cwd, process.args[2] or DEFAULT_ENTRY)
+const bundle_path = resolve_path(cwd, process.args[3] or DEFAULT_BUNDLE_OUTPUT)
+const binary_path = resolve_path(cwd, process.args[4] or DEFAULT_BINARY_OUTPUT)
 const config_path = resolve_path(cwd, DEFAULT_CONFIG)
 const staging_root = create_release_staging(cwd)
 const staged_entry_path = stage_path(cwd, staging_root, entry_path)
