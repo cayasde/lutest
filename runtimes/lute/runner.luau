@@ -1,4 +1,6 @@
 const core = require '@core'
+const context = require '@lib/context'
+const registry = require '@lib/registry'
 const config = require '@runtimes/lute/config'
 const discovery = require '@runtimes/lute/discovery'
 const t = require '@lutest_release'
@@ -29,6 +31,76 @@ const function format_load_error(module_path: string, err: unknown): string
 	const message = `failed to load '{module_path}': {tostring(err)}`
 	return debug.traceback(message, 2)
 end
+
+const function should_use_embedded_release_api(
+	require_path: string,
+	project_config: LutestConfig
+): boolean
+	if require_path ~= project_config.require then return false end
+
+	return string.sub(require_path, 1, 1) == '@'
+end
+
+const function create_embedded_release_api()
+	const function register_spec(spec: TestSpec)
+		if context.register(spec) then return end
+		if not registry.is_active() then return end
+
+		registry.register(spec)
+	end
+
+	const function test(name: string, fn: () -> ()): TestSpec
+		const spec = {
+			name = name,
+			mode = 'run',
+			fn = fn,
+		}
+
+		register_spec(spec)
+		return spec
+	end
+
+	const function skip(name: string, fn: () -> ()): TestSpec
+		const spec = {
+			name = name,
+			mode = 'skip',
+			fn = fn,
+		}
+
+		register_spec(spec)
+		return spec
+	end
+
+	const function only(name: string, fn: () -> ()): TestSpec
+		const spec = {
+			name = name,
+			mode = 'only',
+			fn = fn,
+		}
+
+		register_spec(spec)
+		return spec
+	end
+
+	const function todo(name: string): TestSpec
+		const spec = {
+			name = name,
+			mode = 'todo',
+		}
+
+		register_spec(spec)
+		return spec
+	end
+
+	return {
+		test = test,
+		skip = skip,
+		only = only,
+		todo = todo,
+	}
+end
+
+const embedded_release_api = create_embedded_release_api()
 
 const function create_runtime_register(
 	tests: { TestSpec },
@@ -73,6 +145,15 @@ const function execute_module(
 		suite_module_path
 	)
 	env.require = function(require_path: string)
+		if
+			should_use_embedded_release_api(
+				require_path,
+				project_config
+			)
+		then
+			return embedded_release_api
+		end
+
 		const resolved_ok, resolved_result = pcall(function()
 			return path_utils.normalize_path(
 				path.format(
@@ -134,6 +215,11 @@ const function load_module(
 	const execution_state = {
 		current_module = nil,
 	} :: ExecutionState
+	const previous_register = context.get_register()
+
+	context.set_register(
+		create_runtime_register(tests, execution_state, module_path)
+	)
 
 	const ok, result = xpcall(function()
 		return execute_module(
@@ -149,6 +235,7 @@ const function load_module(
 		return format_load_error(module_path, err)
 	end)
 
+	context.set_register(previous_register)
 	if not ok then error(result, 0) end
 
 	return result, tests
@@ -363,6 +450,54 @@ return t.version
 
 	fs.removeDirectory(temp_cwd, { recursive = true })
 end)
+
+t.test(
+	'should provide the configured require path through the release api',
+	function()
+		const temp_root = path_utils.resolve_path(
+			path_utils.cwd(),
+			'dist/test-tmp'
+		)
+		const temp_cwd = path_utils.resolve_path(
+			temp_root,
+			'runner-release-test-lib'
+		)
+		const suite_path = path_utils.normalize_path(
+			path.join(temp_cwd, 'suite.luau')
+		)
+
+		if fs.exists(temp_cwd) then
+			fs.removeDirectory(temp_cwd, { recursive = true })
+		end
+
+		fs.createDirectory(temp_cwd, { makeParents = true })
+		fs.writeStringToFile(
+			suite_path,
+			[[
+local t = require("@lutest_release")
+
+t.test("suite test", function()
+	assert(true)
+end)
+
+return t
+]]
+		)
+
+		const result, tests = load_module(suite_path, {
+			roots = { '.' },
+			ignore = {},
+			require = '@lutest_release',
+			gitignore = true,
+		})
+
+		assert(type(result) == 'table')
+		assert(#tests == 1)
+		assert(tests[1].name == 'suite test')
+
+		fs.removeDirectory(temp_cwd, { recursive = true })
+	end
+)
 
 return {
 	run_file = run_file,

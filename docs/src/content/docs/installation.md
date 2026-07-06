@@ -63,11 +63,11 @@ Create a `loom.config.luau` in your project root:
 return {
 	package = {
 		name = "my-project",
-		version = "0.1.7",
+		version = "0.1.8",
 		dependencies = {
 			lutest = {
 				name = "lutest",
-				rev = "v0.1.7",
+				rev = "v0.1.8",
 				sourceKind = "github",
 				source = "https://github.com/cayasde/lutest",
 			},

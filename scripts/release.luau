@@ -4,6 +4,10 @@ const path = require '@std/path'
 const path_utils = require '@lutest/utils/path'
 const system = require '@std/system'
 const luau = require '@std/luau'
+const printer = require '@std/syntax/printer'
+const query = require '@std/syntax/query'
+const syntax = require '@std/syntax'
+const syntax_utils = require '@std/syntax/utils'
 
 const DEFAULT_ENTRY = 'cli/init.luau'
 const DEFAULT_BUNDLE_OUTPUT = '.tmp/release-bundle/main.luau'
@@ -14,6 +18,19 @@ const DEFAULT_CONFIG = 'darklua-bundle.json5'
 const GENERATED_CONFIG = '.tmp-darklua-bundle.generated.json5'
 const DEFAULT_DARKLUA_COMMAND = 'darklua'
 const LUTEST_RELEASE_ALIAS_PLACEHOLDER = '__LUTEST_RELEASE_ALIAS__'
+const RELEASE_STAGING_ROOT = '.tmp/release-staging'
+const RELEASE_SELF_TEST_METHODS = {
+	test = true,
+	skip = true,
+	only = true,
+	todo = true,
+}
+const STAGING_SKIP_SEGMENTS = {
+	'.git',
+	'.tmp',
+	'dist',
+	'vendor',
+}
 
 const function tool_path(cwd: string, absolute_path: string): string
 	const normalized_cwd = path_utils.normalize_path(cwd)
@@ -50,6 +67,228 @@ const function load_project_aliases(cwd: string): { [string]: unknown }
 	end
 
 	return aliases
+end
+
+const function path_within_root(root: string, absolute_path: string): string?
+	const relative_path =
+		path_utils.normalize_path(path.relative(root, absolute_path))
+	if relative_path == '' then return '.' end
+	if string.sub(relative_path, 1, 2) == '..' then return nil end
+
+	return relative_path
+end
+
+const function stage_path(
+	project_root: string,
+	staging_root: string,
+	absolute_path: string
+): string
+	const relative_path = path_within_root(project_root, absolute_path)
+	if relative_path == nil then return absolute_path end
+	if relative_path == '.' then return staging_root end
+
+	return path_utils.resolve_path(staging_root, relative_path)
+end
+
+const function should_skip_staging_entry(name: string): boolean
+	for _, segment in STAGING_SKIP_SEGMENTS do
+		if name == segment then return true end
+	end
+
+	return false
+end
+
+const function remove_path(target_path: string)
+	if not fs.exists(target_path) then return end
+
+	const target_type = fs.type(target_path)
+	if target_type == 'dir' then
+		fs.removeDirectory(target_path, { recursive = true })
+		return
+	end
+
+	fs.remove(target_path)
+end
+
+const function copy_directory_recursive(source_dir: string, dest_dir: string)
+	path_utils.ensure_directory(dest_dir)
+
+	for _, entry in fs.listDirectory(source_dir) do
+		if should_skip_staging_entry(entry.name) then continue end
+
+		const source_path = path.join(source_dir, entry.name)
+		const dest_path = path.join(dest_dir, entry.name)
+
+		if entry.type == 'dir' then
+			copy_directory_recursive(source_path, dest_path)
+			continue
+		end
+
+		if entry.type ~= 'file' then continue end
+		path_utils.ensure_directory(path.dirname(dest_path))
+		fs.copy(source_path, dest_path)
+	end
+end
+
+const function is_lutest_release_require(node: syntax.AstNode): boolean
+	const require_call = syntax_utils.isRequireCall(node)
+	if require_call == nil then return false end
+	if #require_call.arguments ~= 1 then return false end
+
+	const require_argument = syntax_utils.isExprConstantString(
+		require_call.arguments[1].node
+	)
+	if require_argument == nil then return false end
+
+	return require_argument.token.text == '@lutest_release'
+end
+
+const function is_stat_local(node: syntax.AstNode): syntax.AstStatLocal?
+	return if node.kind == 'stat' and node.tag == 'local' then node else nil
+end
+
+const function is_stat_expr(node: syntax.AstNode): syntax.AstStatExpr?
+	return if node.kind == 'stat'
+			and node.tag == 'expression'
+		then node
+		else nil
+end
+
+const function collect_lutest_release_locals(
+	ast: syntax.ParseResult
+): { syntax.AstStatLocal }
+	return query.findAllFromRoot(ast, is_stat_local):filter(function(stat)
+		if #stat.variables ~= 1 then return false end
+		if #stat.values ~= 1 then return false end
+
+		return is_lutest_release_require(stat.values[1].node)
+	end).nodes
+end
+
+const function collect_lutest_release_local_names(
+	ast: syntax.ParseResult
+): { [string]: boolean }
+	const local_names = {} :: { [string]: boolean }
+
+	for _, stat in collect_lutest_release_locals(ast) do
+		local_names[stat.variables[1].node.name.text] = true
+	end
+
+	return local_names
+end
+
+const function matches_release_self_test_call(
+	node: syntax.AstNode,
+	lutest_release_locals: { [string]: boolean }
+): boolean
+	const stat = is_stat_expr(node)
+	if stat == nil then return false end
+
+	const call = syntax_utils.isExprCall(stat.expression)
+	if call == nil then return false end
+
+	const method_access = syntax_utils.isExprIndexName(call.func)
+	if method_access == nil then return false end
+
+	const receiver = syntax_utils.isExprLocal(method_access.expression)
+	if receiver == nil then return false end
+	if not lutest_release_locals[receiver['local'].name.text] then
+		return false
+	end
+
+	return RELEASE_SELF_TEST_METHODS[method_access.index.text] == true
+end
+
+const function strip_release_self_tests(source: string): string
+	local current_source = source
+
+	while true do
+		const ast = syntax.parse(current_source)
+		const lutest_release_locals =
+			collect_lutest_release_local_names(ast)
+		if next(lutest_release_locals) == nil then
+			return current_source
+		end
+
+		const self_test_replacements = query.findAllFromRoot(
+			ast,
+			function(node)
+				return if matches_release_self_test_call(
+						node,
+						lutest_release_locals
+					)
+					then node
+					else nil
+			end
+		)
+			:replace(function()
+				return ''
+			end)
+
+		if next(self_test_replacements) == nil then
+			local require_replacements = {} :: syntax.Replacements
+
+			for _, stat in collect_lutest_release_locals(ast) do
+				const local_name =
+					stat.variables[1].node.name.text
+				const remaining_local_uses = query
+					.findAllFromRoot(ast, syntax_utils.isExprLocal)
+					:filter(function(local_ref)
+						return local_ref['local'].name.text
+							== local_name
+					end).nodes
+
+				if #remaining_local_uses == 0 then
+					require_replacements[stat] = ''
+				end
+			end
+
+			if next(require_replacements) == nil then
+				return current_source
+			end
+
+			current_source =
+				printer.printFile(ast, require_replacements)
+			continue
+		end
+
+		current_source = printer.printFile(ast, self_test_replacements)
+	end
+end
+
+const function strip_release_self_tests_from_file(filepath: string)
+	const original_source = fs.readFileToString(filepath)
+	const stripped_source = strip_release_self_tests(original_source)
+	if stripped_source == original_source then return end
+
+	fs.writeStringToFile(filepath, stripped_source)
+end
+
+const function strip_release_self_tests_in_tree(root_dir: string)
+	for _, entry in fs.listDirectory(root_dir) do
+		if should_skip_staging_entry(entry.name) then continue end
+
+		const entry_path = path.join(root_dir, entry.name)
+		if entry.type == 'dir' then
+			strip_release_self_tests_in_tree(entry_path)
+			continue
+		end
+
+		if entry.type ~= 'file' then continue end
+		if path.extname(entry_path) ~= '.luau' then continue end
+
+		strip_release_self_tests_from_file(entry_path)
+	end
+end
+
+const function create_release_staging(project_root: string): string
+	const staging_root =
+		path_utils.resolve_path(project_root, RELEASE_STAGING_ROOT)
+	remove_path(staging_root)
+	copy_directory_recursive(project_root, staging_root)
+	strip_release_self_tests_in_tree(staging_root)
+
+	return staging_root
 end
 
 const function to_darklua_alias(alias_value: string): string
@@ -111,7 +350,7 @@ const function bundle_entry(
 	entry_path: string,
 	bundle_path: string,
 	config_path: string
-)
+): number
 	if not fs.exists(entry_path) then
 		error(`missing entry module '{entry_path}'`, 0)
 	end
@@ -135,15 +374,16 @@ const function bundle_entry(
 		stdio = 'inherit',
 	})
 
-	if result.exitcode ~= 0 then process.exit(result.exitcode) end
+	if result.exitcode ~= 0 then return result.exitcode end
 	print(`bundled entry: {bundle_path}`)
+	return 0
 end
 
 const function compile_bundle(
 	cwd: string,
 	bundle_path: string,
 	binary_path: string
-)
+): number
 	if not fs.exists(bundle_path) then
 		error(`missing bundled entry '{bundle_path}'`, 0)
 	end
@@ -165,8 +405,9 @@ const function compile_bundle(
 		stdio = 'inherit',
 	})
 
-	if result.exitcode ~= 0 then process.exit(result.exitcode) end
+	if result.exitcode ~= 0 then return result.exitcode end
 	print(`built binary: {binary_path}`)
+	return 0
 end
 
 const cwd = path_utils.normalize_path(process.cwd())
@@ -177,6 +418,28 @@ const bundle_path =
 const binary_path =
 	path_utils.resolve_path(cwd, process.args[4] or DEFAULT_BINARY_OUTPUT)
 const config_path = path_utils.resolve_path(cwd, DEFAULT_CONFIG)
+const staging_root = create_release_staging(cwd)
+const staged_entry_path = stage_path(cwd, staging_root, entry_path)
+const staged_config_path = stage_path(cwd, staging_root, config_path)
 
-bundle_entry(cwd, entry_path, bundle_path, config_path)
-compile_bundle(cwd, bundle_path, binary_path)
+local exit_code = 0
+local build_error = nil :: unknown
+const ok = xpcall(function()
+	exit_code = bundle_entry(
+		staging_root,
+		staged_entry_path,
+		bundle_path,
+		staged_config_path
+	)
+	if exit_code ~= 0 then return end
+
+	exit_code = compile_bundle(cwd, bundle_path, binary_path)
+end, function(err)
+	build_error = err
+	return err
+end)
+
+remove_path(staging_root)
+
+if not ok then error(build_error, 0) end
+if exit_code ~= 0 then process.exit(exit_code) end
