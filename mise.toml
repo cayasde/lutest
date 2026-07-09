@@ -8,3 +8,23 @@
 "github:cayasde/lutest" = "0.1.12"
 node = "24.15.0"
 "npm:pnpm" = "11.0.9"
+
+[tasks.format]
+description = "Format project Luau files with StyLua"
+run = "stylua ."
+
+[tasks.format-check]
+description = "Check project Luau formatting with StyLua"
+run = "stylua --check ."
+
+[tasks.lint]
+description = "Lint project Luau files with lute"
+run = "lute lint ."
+
+[tasks.typecheck]
+description = "Typecheck project Luau files with luau-lsp analyze"
+run = "lute run scripts/typecheck.luau"
+
+[tasks.check]
+description = "Run formatting, lint, and typecheck checks"
+depends = ["format-check", "lint", "typecheck"]

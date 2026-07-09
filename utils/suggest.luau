@@ -8,8 +8,8 @@ const function levenshtein_distance(left: string, right: string): number
 	const previous = table.create(#right + 1, 0)
 	const current = table.create(#right + 1, 0)
 
-	for column = 0, #right do
-		previous[column + 1] = column
+	for column = 1, #right + 1 do
+		previous[column] = column - 1
 	end
 
 	for row = 1, #left do

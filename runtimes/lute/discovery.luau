@@ -25,6 +25,16 @@ type DiscoveryInput = {
 
 const GITIGNORE_PATH = '.gitignore'
 
+const function discovery_input(
+	path_value: string,
+	source_value: 'cli' | 'config'
+): DiscoveryInput
+	return {
+		path = path_value,
+		source = source_value,
+	}
+end
+
 const function normalize_ignore_rule(line: string): string
 	const normalized = line:gsub('\\', '/')
 	if stringext.hasSuffix(normalized, '/') then
@@ -249,10 +259,10 @@ const function resolve_input_paths(
 		const resolved = {} :: { DiscoveryInput }
 
 		for _, input_path in paths do
-			table.insert(resolved, {
-				path = input_path,
-				source = 'cli',
-			})
+			table.insert(
+				resolved,
+				discovery_input(input_path, 'cli')
+			)
 		end
 
 		return resolved
@@ -261,10 +271,10 @@ const function resolve_input_paths(
 		const resolved = {} :: { DiscoveryInput }
 
 		for _, input_path in project_config.roots do
-			table.insert(resolved, {
-				path = input_path,
-				source = 'config',
-			})
+			table.insert(
+				resolved,
+				discovery_input(input_path, 'config')
+			)
 		end
 
 		return resolved
@@ -311,10 +321,10 @@ const function find_path_suggestion(input_path: string, cwd: string): string?
 		table.insert(candidates, entry.name)
 	end
 
-	const suggested_name = suggest.closest_match(
-		path.basename(normalized_input),
-		candidates
-	)
+	const basename = path.basename(normalized_input)
+	if basename == nil then return nil end
+
+	const suggested_name = suggest.closest_match(basename, candidates)
 	if suggested_name == nil then return nil end
 
 	return format_suggested_path(normalized_input, suggested_name)
