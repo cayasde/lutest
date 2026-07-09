@@ -20,6 +20,13 @@ type ExecutionState = {
 	current_module: string?,
 }
 
+const function wrap_module_source(source: string): string
+	return [[
+local __lutest_require, __lutest_register = ...
+local require = __lutest_require
+]] .. source
+end
+
 const function is_project_module(
 	resolved_path: string,
 	project_root: string
@@ -138,14 +145,13 @@ const function execute_module(
 
 	loading_modules[module_path] = true
 
-	const env = table.clone(_G :: any)
 	const project_root = path_utils.cwd()
-	env.__lutest_register = create_runtime_register(
+	const runtime_register = create_runtime_register(
 		tests,
 		execution_state,
 		suite_module_path
 	)
-	env.require = function(require_path: string): unknown
+	const runtime_require = function(require_path: string): unknown
 		if
 			should_use_embedded_release_api(
 				require_path,
@@ -187,8 +193,11 @@ const function execute_module(
 		const previous_module = execution_state.current_module
 		execution_state.current_module = module_path
 		const source = fs.readFileToString(module_path)
-		const chunk = luau.load(luau.compile(source), module_path, env)
-		const chunk_result = chunk()
+		const chunk = luau.load(
+			luau.compile(wrap_module_source(source)),
+			module_path
+		)
+		const chunk_result = chunk(runtime_require, runtime_register)
 		execution_state.current_module = previous_module
 		return chunk_result
 	end, function(err)
@@ -499,6 +508,48 @@ return t
 		fs.removeDirectory(temp_cwd, { recursive = true })
 	end
 )
+
+t.test('should keep the standard runtime environment available', function()
+	const temp_root =
+		path_utils.resolve_path(path_utils.cwd(), 'dist/test-tmp')
+	const temp_cwd =
+		path_utils.resolve_path(temp_root, 'runner-runtime-env')
+	const suite_path =
+		path_utils.normalize_path(path.join(temp_cwd, 'suite.luau'))
+
+	if fs.exists(temp_cwd) then
+		fs.removeDirectory(temp_cwd, { recursive = true })
+	end
+
+	fs.createDirectory(temp_cwd, { makeParents = true })
+	fs.writeStringToFile(
+		suite_path,
+		[[
+return {
+	assert_type = type(assert),
+	math_type = type(math),
+	string_type = type(string),
+	table_type = type(table),
+}
+]]
+	)
+
+	const result, tests = load_module(suite_path, {
+		roots = { '.' },
+		ignore = {},
+		require = '@lutest_release',
+		gitignore = true,
+	})
+
+	assert(type(result) == 'table')
+	assert((result :: any).assert_type == 'function')
+	assert((result :: any).math_type == 'table')
+	assert((result :: any).string_type == 'table')
+	assert((result :: any).table_type == 'table')
+	assert(#tests == 0)
+
+	fs.removeDirectory(temp_cwd, { recursive = true })
+end)
 
 return {
 	run_file = run_file,

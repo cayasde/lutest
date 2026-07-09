@@ -6,3 +6,4 @@ docs/.astro/
 docs/dist/
 dist/
 Packages/
+.tmp/
