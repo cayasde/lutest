@@ -31,13 +31,13 @@ Ele pode exportar qualquer valor, ou nada. O Lutest não exige que um módulo re
 Rode assim:
 
 ```powershell
-lutest
+lutest test
 ```
 
 Se você quiser limitar a execução a alguns lugares, passe os paths explicitamente:
 
 ```powershell
-lutest src
+lutest test src
 ```
 
 Até aqui, a ideia importante é simples: o Lutest procura módulos que dependem do package path configurado, carrega esses módulos e transforma cada módulo descoberto em uma suite implícita.

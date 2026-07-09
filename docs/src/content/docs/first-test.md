@@ -31,13 +31,13 @@ It can export anything, or nothing at all. Lutest does not require a module to r
 Run it like this:
 
 ```powershell
-lutest
+lutest test
 ```
 
 If you want to limit the run to specific locations, pass them explicitly:
 
 ```powershell
-lutest src
+lutest test src
 ```
 
 At this point, the important idea is small: Lutest looks for modules that depend on the configured package path, loads them, and turns each discovered module into one implicit suite.

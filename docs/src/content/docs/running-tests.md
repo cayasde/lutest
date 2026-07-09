@@ -4,25 +4,25 @@ title: Running Tests
 
 Once you have a test module, running it is straightforward.
 
-With no arguments, Lutest uses the `roots` from `lutest.toml`:
+With `test` and no paths, Lutest uses the `roots` from `lutest.toml`:
 
 ```powershell
-lutest
+lutest test
 ```
 
 If you want to run only one path, pass it directly:
 
 ```powershell
-lutest src
+lutest test src
 ```
 
 You can also pass more than one path:
 
 ```powershell
-lutest src packages
+lutest test src packages
 ```
 
-That is the whole shape of the current CLI. You pass paths in, and Lutest runs the test modules it discovers there.
+That is the current shape of the test command. You pass paths in, and Lutest runs the test modules it discovers there.
 
 If discovery finds nothing, Lutest exits with a failure status and prints:
 

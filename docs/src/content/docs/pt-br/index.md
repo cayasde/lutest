@@ -28,7 +28,7 @@ return {
 E uma execução desse módulo pode parecer assim:
 
 ```text
-$ lutest .
+$ lutest test .
 
 OK  1 total  1 pass  0 fail  0 skip  0 todo
 ```

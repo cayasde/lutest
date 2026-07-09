@@ -18,7 +18,7 @@ Most projects only need to care about three keys.
 
 `require` tells Lutest which package path marks a module as test-bearing.
 
-`roots` tells Lutest where to start when you run `lutest` with no explicit paths.
+`roots` tells Lutest where to start when you run `lutest test` with no explicit paths.
 
 `ignore` prunes paths you never want discovery to scan.
 

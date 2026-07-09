@@ -7,7 +7,7 @@ The current CLI is compact.
 ## Usage
 
 ```powershell
-lutest [paths...]
+lutest test [paths...]
 ```
 
 ## Help
@@ -19,9 +19,9 @@ lutest -h
 
 ## Paths
 
-When you pass paths, Lutest uses them as discovery inputs.
+When you pass paths to `lutest test`, Lutest uses them as discovery inputs.
 
-When you do not pass paths, Lutest uses `roots` from `lutest.toml`, or `.` when no config is present.
+When you do not pass paths to `lutest test`, Lutest uses `roots` from `lutest.toml`, or `.` when no config is present.
 
 ## Exit behavior
 

@@ -4,17 +4,19 @@ const t = require '@lutest_release'
 const function format_help(): string
 	return table.concat({
 		tint.cyan.bold 'Usage:',
-		`  {tint.green 'lutest [paths...]'}`,
+		`  {tint.green 'lutest test [paths...]'}`,
+		`  {tint.green 'lutest --help'}`,
 		'',
 		tint.cyan.bold 'Description:',
-		'  Discover and run test modules from the given files or directories.',
-		'  Without paths, uses roots from lutest.toml or defaults to ".".',
+		'  Run Lutest subcommands.',
+		'  The test command discovers and runs test modules from the given files or directories.',
+		'  Without test paths, uses roots from lutest.toml or defaults to ".".',
 		'',
 		tint.cyan.bold 'Examples:',
-		`  {tint.green 'lutest'}`,
-		`  {tint.green 'lutest .'}`,
-		`  {tint.green 'lutest src'}`,
-		`  {tint.green 'lutest src packages'}`,
+		`  {tint.green 'lutest test'}`,
+		`  {tint.green 'lutest test .'}`,
+		`  {tint.green 'lutest test src'}`,
+		`  {tint.green 'lutest test src packages'}`,
 	}, '\n')
 end
 
@@ -26,17 +28,18 @@ t.test('should format help with usage, description, and examples', function()
 	const output = format_help()
 
 	assert(output:find('Usage:', 1, true) ~= nil)
-	assert(output:find('lutest [paths...]', 1, true) ~= nil)
+	assert(output:find('lutest test [paths...]', 1, true) ~= nil)
+	assert(output:find('lutest --help', 1, true) ~= nil)
 	assert(output:find('Description:', 1, true) ~= nil)
 	assert(
 		output:find(
-			'Discover and run test modules from the given files or directories.',
+			'The test command discovers and runs test modules from the given files or directories.',
 			1,
 			true
 		) ~= nil
 	)
 	assert(output:find('Examples:', 1, true) ~= nil)
-	assert(output:find('lutest src packages', 1, true) ~= nil)
+	assert(output:find('lutest test src packages', 1, true) ~= nil)
 end)
 
 return {

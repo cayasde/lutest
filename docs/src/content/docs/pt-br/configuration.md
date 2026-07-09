@@ -18,7 +18,7 @@ Na maioria dos projetos, só três chaves importam de verdade.
 
 `require` diz ao Lutest qual package path marca um módulo como portador de testes.
 
-`roots` diz ao Lutest por onde começar quando você roda `lutest` sem paths explícitos.
+`roots` diz ao Lutest por onde começar quando você roda `lutest test` sem paths explícitos.
 
 `ignore` poda paths que você nunca quer que o discovery escaneie.
 

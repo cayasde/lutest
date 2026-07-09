@@ -1,5 +1,5 @@
 [discovery]
 require = "@lutest_release"
-roots = ["core", "lib", "runtimes"]
+roots = ["core", "lib", "runtimes", "cli", "utils"]
 ignore = ["vendor", "luau_packages", ".git", "dist/test-tmp"]
 gitignore = true
