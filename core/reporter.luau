@@ -41,11 +41,25 @@ const function suite_result(
 end
 
 const function format_counts(result: RunResult): string
-	return `{result.total_tests} total  {tint.green(
-		`{result.passed_tests} pass`
-	)}  {tint.red(`{result.failed_tests} fail`)}  {tint.yellow(
-		`{result.skipped_tests} skip`
-	)}  {tint.magenta(`{result.todo_tests} todo`)}`
+	local parts = { `{result.total_tests} total` }
+
+	if result.passed_tests > 0 then
+		table.insert(parts, tint.green(`{result.passed_tests} pass`))
+	end
+
+	if result.failed_tests > 0 then
+		table.insert(parts, tint.red(`{result.failed_tests} fail`))
+	end
+
+	if result.skipped_tests > 0 then
+		table.insert(parts, tint.yellow(`{result.skipped_tests} skip`))
+	end
+
+	if result.todo_tests > 0 then
+		table.insert(parts, tint.magenta(`{result.todo_tests} todo`))
+	end
+
+	return table.concat(parts, '  ')
 end
 
 const function collect_run_result(results: { TestSuiteResult }): RunResult
@@ -128,8 +142,8 @@ t.test('should format aggregated run results in one line', function()
 	assert(output:find('OK', 1, true) ~= nil)
 	assert(output:find('16 total', 1, true) ~= nil)
 	assert(output:find('7 pass', 1, true) ~= nil)
-	assert(output:find('0 fail', 1, true) ~= nil)
-	assert(output:find('0 skip', 1, true) ~= nil)
+	assert(output:find('0 fail', 1, true) == nil)
+	assert(output:find('0 skip', 1, true) == nil)
 	assert(output:find('9 todo', 1, true) ~= nil)
 	assert(output:find('suite:', 1, true) == nil)
 	assert(output:find('\n', 1, true) == nil)
@@ -177,7 +191,7 @@ t.test('should aggregate skipped counts across suites', function()
 	assert(output:find('OK', 1, true) ~= nil)
 	assert(output:find('5 total', 1, true) ~= nil)
 	assert(output:find('2 pass', 1, true) ~= nil)
-	assert(output:find('0 fail', 1, true) ~= nil)
+	assert(output:find('0 fail', 1, true) == nil)
 	assert(output:find('2 skip', 1, true) ~= nil)
 	assert(output:find('1 todo', 1, true) ~= nil)
 	assert(output:find('\n', 1, true) == nil)
@@ -225,10 +239,10 @@ t.test('should format an empty run summary', function()
 
 	assert(output:find('OK', 1, true) ~= nil)
 	assert(output:find('0 total', 1, true) ~= nil)
-	assert(output:find('0 pass', 1, true) ~= nil)
-	assert(output:find('0 fail', 1, true) ~= nil)
-	assert(output:find('0 skip', 1, true) ~= nil)
-	assert(output:find('0 todo', 1, true) ~= nil)
+	assert(output:find('0 pass', 1, true) == nil)
+	assert(output:find('0 fail', 1, true) == nil)
+	assert(output:find('0 skip', 1, true) == nil)
+	assert(output:find('0 todo', 1, true) == nil)
 	assert(output:find('\n', 1, true) == nil)
 end)
 
