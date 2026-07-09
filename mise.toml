@@ -23,7 +23,12 @@ run = "lute lint ."
 
 [tasks.typecheck]
 description = "Typecheck project Luau files with luau-lsp analyze"
+depends = ["ensure-roblox-defs"]
 run = "lute run scripts/typecheck.luau"
+
+[tasks.ensure-roblox-defs]
+description = "Ensure Roblox Luau definitions are cached for CLI typechecking"
+run = "lute run scripts/ensure-roblox-defs.luau"
 
 [tasks.check]
 description = "Run formatting, lint, and typecheck checks"

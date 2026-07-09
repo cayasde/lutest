@@ -1,6 +1,9 @@
 {
   "luau-lsp.platform.type": "roblox",
   "luau-lsp.sourcemap.enabled": false,
+  "luau-lsp.types.definitionFiles": {
+    "@roblox": "https://luau-lsp.pages.dev/type-definitions/globalTypes.PluginSecurity.d.luau"
+  },
   "luau-lsp.fflags.enableNewSolver": true,
   "luau-lsp.fflags.override": {
     "LuauExportValueSyntax": "True",
