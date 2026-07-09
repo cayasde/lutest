@@ -3,7 +3,7 @@ const suggest = require '@lutest/utils/suggest'
 const t = require '@lutest_release'
 
 export type ParsedCommand = {
-	kind: 'help' | 'test' | 'error',
+	kind: 'help' | 'test' | 'version' | 'error',
 	paths: { string }?,
 	message: string?,
 }
@@ -25,7 +25,7 @@ const function parse_command(args: { string }): ParsedCommand
 			kind = 'error',
 			message = errors.usage_error('Missing command.', {
 				where = 'lutest',
-				how_to_fix = 'Use `lutest test [paths...]` to run tests, or `lutest help` to see available commands.',
+				how_to_fix = 'Use `lutest test [paths...]` to run tests, `lutest version` to see the current version, or `lutest help` to see available commands.',
 			}),
 		}
 	end
@@ -41,9 +41,14 @@ const function parse_command(args: { string }): ParsedCommand
 		kind = 'help',
 	} end
 
+	if command == 'version' then return {
+		kind = 'version',
+	} end
+
 	const suggested_command = suggest.closest_match(command, {
 		'help',
 		'test',
+		'version',
 	})
 
 	return {
@@ -54,7 +59,7 @@ const function parse_command(args: { string }): ParsedCommand
 			suggestion = if suggested_command == nil
 				then nil
 				else `'{suggested_command}'`,
-			how_to_fix = 'Use `lutest test [paths...]` to run tests, or `lutest help` to see available commands.',
+			how_to_fix = 'Use `lutest test [paths...]` to run tests, `lutest version` to see the current version, or `lutest help` to see available commands.',
 		}),
 	}
 end
@@ -78,6 +83,14 @@ t.test('should parse help subcommand as help', function()
 	}
 
 	assert(command.kind == 'help')
+end)
+
+t.test('should parse version subcommand as version', function()
+	const command = parse_command {
+		'version',
+	}
+
+	assert(command.kind == 'version')
 end)
 
 t.test('should parse test subcommand paths', function()

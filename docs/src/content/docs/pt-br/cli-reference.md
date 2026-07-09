@@ -10,6 +10,12 @@ A CLI atual é compacta.
 lutest test [paths...]
 ```
 
+## Version
+
+```powershell
+lutest version
+```
+
 ## Help
 
 ```powershell

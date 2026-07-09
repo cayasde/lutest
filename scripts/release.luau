@@ -26,6 +26,7 @@ const RELEASE_SELF_TEST_METHODS = {
 }
 const STAGING_SKIP_SEGMENTS = {
 	'.git',
+	'.cache',
 	'.tmp',
 	'dist',
 	'vendor',

@@ -12,6 +12,7 @@ Use the repository release scripts where they are reliable, and do the publish s
 1. Confirm the target version and inspect the current working tree.
 2. Bump the versioned files manually:
    - `package.json`
+   - `cli/version.luau`
    - `mise.toml`
    - `loom.config.luau`
    - `loom.lock.luau`
@@ -61,6 +62,7 @@ If the release intentionally changes the test-registration contract or drops bac
 ## Repository-Specific Notes
 
 - `scripts/release.luau` is the build step.
+- `cli/version.luau` must be updated together with the release version, because `lutest version` is embedded in the binary and does not read `package.json` at runtime.
 - `mise` compatibility depends on the uploaded asset name matching the expected platform and architecture pattern.
 - Release publishing is manual on purpose. The repository no longer keeps a publish orchestrator script because the edge cases were not worth encoding in project code.
 - Use `git commit --no-verify` for the release commit when bumping `mise.toml` to an unreleased Lutest version would break local hooks that call `mise exec`.

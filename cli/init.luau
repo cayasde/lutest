@@ -2,6 +2,7 @@ const process = require '@std/process'
 const errors = require '@core/errors'
 const command = require '@self/command'
 const help = require '@self/help'
+const version = require '@self/version'
 const reporter = require '@core/reporter'
 const lute = require '@runtimes/lute'
 
@@ -33,6 +34,11 @@ const function main()
 
 	if parsed_command.kind == 'help' then
 		help.print_help()
+		process.exit(0)
+	end
+
+	if parsed_command.kind == 'version' then
+		version.print_version()
 		process.exit(0)
 	end
 
