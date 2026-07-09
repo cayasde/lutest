@@ -13,8 +13,7 @@ lutest test [paths...]
 ## Help
 
 ```powershell
-lutest --help
-lutest -h
+lutest help
 ```
 
 ## Paths

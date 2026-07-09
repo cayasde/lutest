@@ -22,7 +22,7 @@ mise install
 Em seguida, você já pode rodar:
 
 ```sh
-lutest --help
+lutest help
 ```
 
 ## Rokit
@@ -36,7 +36,7 @@ rokit add cayasde/lutest
 Depois confirme a instalação:
 
 ```sh
-lutest --help
+lutest help
 ```
 
 ## Observações
