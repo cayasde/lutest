@@ -1,16 +1,16 @@
 return {
 	version = 2,
 	dependencies = {
-		['lutest@v0.1.12'] = {
-			installPath = 'Packages/lutest@v0.1.12',
+		['lutest@v0.2.0'] = {
+			installPath = 'Packages/lutest@v0.2.0',
 			name = 'lutest',
-			rev = 'v0.1.12',
+			rev = 'v0.2.0',
 			source = 'https://github.com/cayasde/lutest',
 			sourceKind = 'github',
 			dependencies = {
-				lutest = 'lutest@v0.1.12',
+				lutest = 'lutest@v0.2.0',
 			},
 		},
 	},
-	packages = { 'lutest@v0.1.12' },
+	packages = { 'lutest@v0.2.0' },
 }
