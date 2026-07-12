@@ -28,7 +28,7 @@ const function load_failures_as_results(
 	const results = {} :: { TestSuiteResult }
 	for _, failure in failures do
 		const test_result: protocol.TestResult = {
-			name = 'load test suite',
+			name = `load test suite: {failure.path}`,
 			kind = 'failed',
 			error_message = failure.error_message,
 		}
@@ -104,6 +104,7 @@ t.test('should map a suite load failure to a failed reporter result', function()
 		},
 	}
 	assert(results[1].failed_tests == 1)
+	assert(results[1].results[1].name == 'load test suite: src/broken.luau')
 	assert(results[1].results[1].error_message == 'boom')
 end)
 

@@ -33,6 +33,16 @@ local function folder_for(root, segments, count)
 	return current
 end
 
+local function script_class(relative_path)
+	if string.match(relative_path, '%.client%.luau$') then
+		return 'LocalScript'
+	end
+	if string.match(relative_path, '%.server%.luau$') then
+		return 'Script'
+	end
+	return 'ModuleScript'
+end
+
 local manifest_path = find_argument '--manifest'
 local output_path = find_argument '--output'
 if manifest_path == nil or output_path == nil then
@@ -60,7 +70,7 @@ for _, entry in manifest.files do
 
 	local segments = string.split(entry.relative, '/')
 	local parent = folder_for(root, segments, #segments - 1)
-	local module = roblox.Instance.new 'ModuleScript'
+	local module = roblox.Instance.new(script_class(entry.relative))
 	module.Name = string.gsub(segments[#segments], '%.luau$', '')
 	module.Source = if type(entry.source) == 'string'
 		then entry.source

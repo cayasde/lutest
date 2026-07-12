@@ -131,10 +131,17 @@ end
 local output = { version = 1, results = {}, load_failures = {} }
 for _, test_path in test_paths do
 	local module = find_module(test_path)
-	if module == nil or not module:IsA("ModuleScript") then
+	if module == nil then
 		table.insert(output.load_failures, {
 			path = test_path,
 			error_message = "Test module was not present in the deserialized bundle.",
+		})
+		continue
+	end
+	if not module:IsA("ModuleScript") then
+		table.insert(output.load_failures, {
+			path = test_path,
+			error_message = "Roblox remote test suites must be ModuleScripts. LocalScripts and Scripts cannot run in a Luau execution session. Move the testable logic into a ModuleScript and keep the LocalScript or Script as an integration layer.",
 		})
 		continue
 	end
@@ -177,6 +184,7 @@ t.test('should generate a harness that emits one versioned envelope', function()
 	assert(source:find('existing:Destroy()', 1, true) ~= nil)
 	assert(source:find('runtime_context.set_register', 1, true) ~= nil)
 	assert(source:find('test_api.set_runtime_register', 1, true) == nil)
+	assert(source:find('must be ModuleScripts', 1, true) ~= nil)
 end)
 
 return {
