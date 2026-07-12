@@ -685,8 +685,6 @@ error("boom from module")
 	fs.removeDirectory(temp_cwd, { recursive = true })
 end)
 
-t.todo 'askmaska'
-
 return {
 	collect_suites = collect_suites,
 	run_file = run_file,
