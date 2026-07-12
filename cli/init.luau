@@ -4,18 +4,12 @@ const command = require '@self/command'
 const help = require '@self/help'
 const version = require '@self/version'
 const reporter = require '@self/reporter'
+const todo = require '@self/todo'
 const lute = require '@runtimes/lute'
 const roblox = require '@runtimes/roblox'
 
-type TodoTest = {
-	name: string,
-	mode: 'todo',
-}
-
-type TodoSuite = {
-	name: string,
-	tests: { TodoTest },
-}
+type TodoTest = todo.TodoTest
+type TodoSuite = todo.TodoSuite
 
 const function collect_cli_args(): { string }
 	const args = {} :: { string }
@@ -68,33 +62,6 @@ const function collect_todo_suites(paths: { string }): { TodoSuite }
 	return todo_suites
 end
 
-const function collect_remote_todo_suites(
-	results: { reporter.TestSuiteResult }
-): { TodoSuite }
-	const todo_suites = {} :: { TodoSuite }
-	for _, suite in results do
-		const tests = {} :: { TodoTest }
-		for _, result in suite.results do
-			if result.kind == 'todo' then
-				table.insert(
-					tests,
-					{
-						name = result.name,
-						mode = 'todo',
-					} :: TodoTest
-				)
-			end
-		end
-		if #tests > 0 then
-			table.insert(todo_suites, {
-				name = suite.name,
-				tests = tests,
-			})
-		end
-	end
-	return todo_suites
-end
-
 const function main()
 	const args = collect_cli_args()
 	const parsed_command = command.parse_command(args)
@@ -122,12 +89,19 @@ const function main()
 	const ok = xpcall(function()
 		if parsed_command.kind == 'todo' then
 			if parsed_command.runtime == 'roblox' then
-				todo_suites = collect_remote_todo_suites(
-					roblox.run(
-						parsed_command.paths :: { string },
-						'todo'
-					) :: any
-				)
+				const remote_results = roblox.run(
+					parsed_command.paths :: { string },
+					'todo'
+				) :: { reporter.TestSuiteResult }
+				const remote_todos, failures =
+					todo.collect_remote_todo_suites(
+						remote_results
+					)
+				if #failures > 0 then
+					reporter.print_run_result(failures)
+					process.exit(1)
+				end
+				todo_suites = remote_todos
 				return
 			end
 			todo_suites = collect_todo_suites(
