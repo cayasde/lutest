@@ -1,11 +1,11 @@
 return {
 	package = {
 		name = 'lutest-selfhost',
-		version = '0.2.0',
+		version = '0.3.0',
 		dependencies = {
 			lutest = {
 				name = 'lutest',
-				rev = 'v0.2.0',
+				rev = 'v0.3.0',
 				sourceKind = 'github',
 				source = 'https://github.com/cayasde/lutest',
 			},
