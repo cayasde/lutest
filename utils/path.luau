@@ -4,8 +4,10 @@ const process = require '@std/process'
 const t = require '@lutest_release'
 
 const function normalize_path(value: path.Pathlike): string
-	const formatted = path.format(path.normalize(value))
-	return (formatted:gsub('\\', '/'))
+	const formatted = path.format(value):gsub('\\', '/')
+	const normalized = path.format(path.normalize(formatted))
+
+	return (normalized:gsub('\\', '/'))
 end
 
 const function cwd(): string

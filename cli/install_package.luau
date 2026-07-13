@@ -76,7 +76,7 @@ t.test(
 )
 
 t.test('should explain how to require the installed package', function()
-	const output = format_success 'C:/project/lutest'
+	const output = format_success(path_utils.resolve_from_cwd 'lutest')
 	assert(output:find('ReplicatedStorage.lutest', 1, true) ~= nil)
 end)
 
