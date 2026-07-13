@@ -37,10 +37,18 @@ const function print_lutest_error(message: string)
 	print(errors.display_error(message))
 end
 
-const function collect_todo_suites(paths: { string }): { TodoSuite }
+const function collect_todo_suites(
+	paths: { string },
+	config_path: string?
+): { TodoSuite }
 	local todo_suites = {} :: { TodoSuite }
 
-	for _, suite in lute.collect_suites(lute.discover_files(paths)) do
+	for _, suite in
+		lute.collect_suites(
+			lute.discover_files(paths, config_path),
+			config_path
+		)
+	do
 		const todo_tests = {} :: { TodoTest }
 
 		for _, test in suite.tests do
@@ -108,12 +116,15 @@ const function main()
 		if parsed_command.kind == 'todo' then
 			const runtime = parsed_command.runtime
 				or config.default_runtime(
-					config.load_project_config()
+					config.load_project_config(
+						parsed_command.config_path
+					)
 				)
 			if runtime == 'roblox' then
 				const remote_results = roblox.run(
 					parsed_command.paths :: { string },
-					'todo'
+					'todo',
+					parsed_command.config_path
 				) :: { reporter.TestSuiteResult }
 				const remote_todos, failures =
 					todo.collect_remote_todo_suites(
@@ -127,23 +138,31 @@ const function main()
 				return
 			end
 			todo_suites = collect_todo_suites(
-				parsed_command.paths :: { string }
+				parsed_command.paths :: { string },
+				parsed_command.config_path
 			)
 			return
 		end
 
 		const runtime = parsed_command.runtime
-			or config.default_runtime(config.load_project_config())
+			or config.default_runtime(
+				config.load_project_config(
+					parsed_command.config_path
+				)
+			)
 		if runtime == 'roblox' then
 			results = roblox.run(
 				parsed_command.paths :: { string },
-				'test'
+				'test',
+				parsed_command.config_path
 			) :: any
 			return
 		end
 
-		results =
-			lute.run_discovered(parsed_command.paths :: { string })
+		results = lute.run_discovered(
+			parsed_command.paths :: { string },
+			parsed_command.config_path
+		)
 	end, function(err)
 		runtime_error = tostring(err)
 		return runtime_error

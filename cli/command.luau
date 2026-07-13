@@ -12,6 +12,7 @@ export type ParsedCommand = {
 		| 'error',
 	paths: { string }?,
 	runtime: 'lute' | 'roblox'?,
+	config_path: string?,
 	output: string?,
 	message: string?,
 }
@@ -24,14 +25,20 @@ const SUPPORTED_RUNTIMES = {
 const function collect_command_arguments(
 	args: { string },
 	start_index: number
-): ({ string }, 'lute' | 'roblox'?)
+): (
+	{ string },
+	'lute' | 'roblox'?,
+	string?
+)
 	const paths = {} :: { string }
 	local runtime = nil :: ('lute' | 'roblox')?
+	local config_path = nil :: string?
 
 	local index = start_index
 	while index <= #args do
 		const argument = args[index]
 		local runtime_value = nil :: string?
+		local config_value = nil :: string?
 
 		if argument == '--runtime' then
 			if index == #args then
@@ -44,6 +51,17 @@ const function collect_command_arguments(
 			index += 1
 		elseif argument:sub(1, 10) == '--runtime=' then
 			runtime_value = argument:sub(11)
+		elseif argument == '--config' then
+			if index == #args then
+				error(
+					errors.usage_error 'Missing value for `--config`.',
+					0
+				)
+			end
+			config_value = args[index + 1]
+			index += 1
+		elseif argument:sub(1, 9) == '--config=' then
+			config_value = argument:sub(10)
 		end
 
 		if runtime_value ~= nil then
@@ -67,6 +85,25 @@ const function collect_command_arguments(
 			continue
 		end
 
+		if config_value ~= nil then
+			if config_path ~= nil then
+				error(
+					errors.usage_error '`--config` may only be provided once.',
+					0
+				)
+			end
+			if config_value == '' then
+				error(
+					errors.usage_error 'Missing value for `--config`.',
+					0
+				)
+			end
+
+			config_path = config_value
+			index += 1
+			continue
+		end
+
 		if argument:sub(1, 2) == '--' then
 			error(
 				errors.usage_error(
@@ -80,7 +117,7 @@ const function collect_command_arguments(
 		index += 1
 	end
 
-	return paths, runtime
+	return paths, runtime, config_path
 end
 
 const function parse_command(args: { string }): ParsedCommand
@@ -131,9 +168,11 @@ const function parse_command(args: { string }): ParsedCommand
 	if command == 'test' or command == 'todo' then
 		local paths = nil :: { string }?
 		local runtime = nil :: ('lute' | 'roblox')?
+		local config_path = nil :: string?
 		local parse_error = nil :: string?
 		const ok = xpcall(function()
-			paths, runtime = collect_command_arguments(args, 2)
+			paths, runtime, config_path =
+				collect_command_arguments(args, 2)
 		end, function(err)
 			parse_error = tostring(err)
 			return parse_error
@@ -149,6 +188,7 @@ const function parse_command(args: { string }): ParsedCommand
 			kind = command,
 			paths = paths,
 			runtime = runtime,
+			config_path = config_path,
 		}
 	end
 
@@ -295,6 +335,32 @@ t.test('should parse an explicit Roblox runtime', function()
 	assert(command.kind == 'test')
 	assert(command.runtime == 'roblox')
 	assert(#(command.paths :: { string }) == 1)
+end)
+
+t.test('should parse a config path for test commands', function()
+	const command = parse_command {
+		'todo',
+		'game',
+		'--config',
+		'configs/roblox.toml',
+	}
+
+	assert(command.kind == 'todo')
+	assert(command.config_path == 'configs/roblox.toml')
+	assert(#(command.paths :: { string }) == 1)
+end)
+
+t.test('should reject a missing config path', function()
+	const command = parse_command { 'test', '--config=' }
+
+	assert(command.kind == 'error')
+	assert(
+		(command.message :: string):find(
+			'Missing value for `--config`.',
+			1,
+			true
+		) ~= nil
+	)
 end)
 
 t.test('should reject an unknown runtime', function()

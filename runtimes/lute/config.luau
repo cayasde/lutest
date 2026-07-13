@@ -1,5 +1,4 @@
 const fs = require '@std/fs'
-const path = require '@std/path'
 const stringext = require '@std/stringext'
 const errors = require '@core/errors'
 const path_utils = require '@lutest/utils/path'
@@ -243,23 +242,46 @@ const function parse_config(contents: string): ProjectConfig
 	return project
 end
 
-const function configuration_error(cwd: string, details: string): never
+const function resolve_config_path(config_path: string?): string
+	if config_path ~= nil then
+		return path_utils.resolve_from_cwd(config_path)
+	end
+
+	return path_utils.resolve_path(path_utils.cwd(), CONFIG_PATH)
+end
+
+const function configuration_error(config_path: string, details: string): never
 	error(
-		errors.configuration_error('Could not parse `lutest.toml`.', {
-			where = path_utils.normalize_path(
-				path.join(cwd, CONFIG_PATH)
-			),
-			how_to_fix = 'Use [discovery], [discovery.lute], [discovery.roblox], and [roblox] according to the Lutest configuration reference.',
-			details = details,
-		}),
+		errors.configuration_error(
+			'Could not parse configuration file.',
+			{
+				where = path_utils.normalize_path(config_path),
+				how_to_fix = 'Use [discovery], [discovery.lute], [discovery.roblox], and [roblox] according to the Lutest configuration reference.',
+				details = details,
+			}
+		),
 		0
 	)
 end
 
-const function load_project_config(cwd: string?): ProjectConfig
-	const resolved_cwd = cwd or path_utils.cwd()
-	const config_path = path.join(resolved_cwd, CONFIG_PATH)
-	if not fs.exists(config_path) then
+const function load_project_config(config_path: string?): ProjectConfig
+	const resolved_config_path = resolve_config_path(config_path)
+	if not fs.exists(resolved_config_path) then
+		if config_path ~= nil then
+			error(
+				errors.configuration_error(
+					'Configuration file not found.',
+					{
+						where = path_utils.normalize_path(
+							resolved_config_path
+						),
+						how_to_fix = 'Pass an existing file with `--config <path>`, or omit `--config` to use `lutest.toml` from the current directory.',
+					}
+				),
+				0
+			)
+		end
+
 		return {
 			lute = clone_config(DEFAULT_LUTE_CONFIG),
 			roblox = nil,
@@ -270,13 +292,13 @@ const function load_project_config(cwd: string?): ProjectConfig
 	local result = nil :: ProjectConfig?
 	local parse_error = nil :: string?
 	const ok = xpcall(function()
-		result = parse_config(fs.readFileToString(config_path))
+		result = parse_config(fs.readFileToString(resolved_config_path))
 	end, function(err)
 		parse_error = tostring(err)
 		return parse_error
 	end)
 	if not ok then
-		configuration_error(resolved_cwd, parse_error :: string)
+		configuration_error(resolved_config_path, parse_error :: string)
 	end
 	return result :: ProjectConfig
 end
@@ -297,9 +319,9 @@ const function default_runtime(project: ProjectConfig): RuntimeName
 	return 'lute'
 end
 
-const function load_config(cwd: string?): LutestConfig
-	const resolved_cwd = cwd or path_utils.cwd()
-	const project = load_project_config(resolved_cwd)
+const function load_config(config_path: string?): LutestConfig
+	const resolved_config_path = resolve_config_path(config_path)
+	const project = load_project_config(config_path)
 	if
 		project.lute ~= nil
 		and project.lute.require ~= ''
@@ -313,7 +335,7 @@ const function load_config(cwd: string?): LutestConfig
 			'Missing [discovery.lute] configuration.',
 			{
 				where = path_utils.normalize_path(
-					path.join(resolved_cwd, CONFIG_PATH)
+					resolved_config_path
 				),
 				how_to_fix = 'Add [discovery.lute] with `require` and `roots`, or run `lutest test --runtime roblox` with its matching configuration.',
 			}
@@ -322,19 +344,18 @@ const function load_config(cwd: string?): LutestConfig
 	)
 end
 
-const function load_roblox_config(cwd: string?): (LutestConfig, RobloxConfig)
-	const resolved_cwd = cwd or path_utils.cwd()
-	const project = load_project_config(resolved_cwd)
+const function load_roblox_config(
+	config_path: string?
+): (LutestConfig, RobloxConfig)
+	const resolved_config_path = resolve_config_path(config_path)
+	const project = load_project_config(config_path)
 	if project.roblox == nil or project.roblox_options == nil then
 		error(
 			errors.configuration_error(
 				'Missing Roblox runtime configuration.',
 				{
 					where = path_utils.normalize_path(
-						path.join(
-							resolved_cwd,
-							CONFIG_PATH
-						)
+						resolved_config_path
 					),
 					how_to_fix = 'Add [discovery.roblox] with `require` and `roots`, and [roblox] with `universe_id` and `place_id`.',
 				}
@@ -348,10 +369,7 @@ const function load_roblox_config(cwd: string?): (LutestConfig, RobloxConfig)
 				'Incomplete [discovery.roblox] configuration.',
 				{
 					where = path_utils.normalize_path(
-						path.join(
-							resolved_cwd,
-							CONFIG_PATH
-						)
+						resolved_config_path
 					),
 					how_to_fix = 'Set non-empty `require` and `roots` values in [discovery.roblox].',
 				}
@@ -368,10 +386,7 @@ const function load_roblox_config(cwd: string?): (LutestConfig, RobloxConfig)
 				'Incomplete [roblox] configuration.',
 				{
 					where = path_utils.normalize_path(
-						path.join(
-							resolved_cwd,
-							CONFIG_PATH
-						)
+						resolved_config_path
 					),
 					how_to_fix = 'Set positive `universe_id` and `place_id` values in [roblox].',
 				}
@@ -416,6 +431,51 @@ timeout_seconds = 301
 ]]
 	end)
 	assert(ok == false)
+end)
+
+t.test('should load an explicit configuration file', function()
+	const temp_root = path_utils.resolve_path(
+		path_utils.cwd(),
+		'dist/test-tmp/config-explicit-path'
+	)
+	const config_path = path_utils.resolve_path(temp_root, 'roblox.toml')
+
+	if fs.exists(temp_root) then
+		fs.removeDirectory(temp_root, { recursive = true })
+	end
+	path_utils.ensure_directory(temp_root)
+	fs.writeStringToFile(
+		config_path,
+		[[
+[discovery.lute]
+require = "@lutest_release"
+roots = ["fixtures"]
+]]
+	)
+
+	const project = load_project_config(config_path)
+	fs.removeDirectory(temp_root, { recursive = true })
+
+	assert(project.lute ~= nil)
+	assert((project.lute :: LutestConfig).roots[1] == 'fixtures')
+end)
+
+t.test('should reject a missing explicit configuration file', function()
+	const config_path = path_utils.resolve_path(
+		path_utils.cwd(),
+		'dist/test-tmp/missing-lutest-config.toml'
+	)
+	local message = ''
+	const ok = xpcall(function()
+		load_project_config(config_path)
+	end, function(err)
+		message = tostring(err)
+		return message
+	end)
+
+	assert(ok == false)
+	assert(message:find('Configuration file not found.', 1, true) ~= nil)
+	assert(message:find(config_path, 1, true) ~= nil)
 end)
 
 t.test('should select Roblox when it is the only configured runtime', function()

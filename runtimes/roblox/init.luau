@@ -49,9 +49,11 @@ end
 
 const function run(
 	paths: { string },
-	mode: 'test' | 'todo'
+	mode: 'test' | 'todo',
+	config_path: string?
 ): { TestSuiteResult }
-	const discovery_config, roblox_config = config.load_roblox_config()
+	const discovery_config, roblox_config =
+		config.load_roblox_config(config_path)
 	const suites = discovery.discover_suites(paths, discovery_config)
 	if #suites == 0 then return {} end
 
