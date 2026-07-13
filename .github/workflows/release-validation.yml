@@ -76,7 +76,7 @@ jobs:
           & $binary test
 
       - name: Upload validated binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lutest-${{ matrix.platform }}
           path: ${{ matrix.binary }}
