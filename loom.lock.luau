@@ -5,7 +5,7 @@ return {
 			installPath = 'Packages/lutest@v0.4.0',
 			name = 'lutest',
 			rev = 'v0.4.0',
-			source = 'https://github.com/cayasde/lutest',
+			source = 'https://github.com/lutest-dev/lutest',
 			sourceKind = 'github',
 			dependencies = {
 				lutest = 'lutest@v0.4.0',

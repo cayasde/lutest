@@ -17,12 +17,14 @@ jobs:
 
       - name: Setup mise
         uses: jdx/mise-action@v4
+        with:
+          install: false
 
       - name: Install Luau packages
-        run: mise exec -- pesde install
+        run: mise --no-config exec github:pesde-pkg/pesde@0.7.3+registry.0.2.3 --command "pesde install"
 
       - name: Check formatting
-        run: mise exec -- stylua --check .
+        run: mise --no-config exec github:JohnnyMorganz/StyLua@2.5.2 --command "stylua --check ."
 
       - name: Run lint
-        run: mise exec -- lute lint .
+        run: mise --no-config exec github:luau-lang/lute@1.0.0 --command "lute lint ."
