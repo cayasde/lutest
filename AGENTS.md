@@ -27,6 +27,12 @@ user decides when it is ready for review and merge. Before asking that
 decision, report concise reasons to accept the pull request and any concrete
 reasons not to accept it yet, including unverified risks or failing checks.
 
+When the user asks to commit, determine whether the change belongs to the
+purpose of the current branch and its pull request. Commit and push it to that
+pull request only when the responsibility matches. Otherwise create a new
+`type/slug` branch and a separate draft pull request; do not mix unrelated
+work merely because a branch is already active.
+
 When preparing a pull request, Codex must make the release decision without
 asking the user to create release metadata:
 
