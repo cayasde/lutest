@@ -1,6 +1,7 @@
 const types = require '@core/types'
-const path_utils = require '@lutest/utils/path'
+const executor = require '@core/executor'
 const t = require '@lutest_release'
+const path_utils = require '@lutest/utils/path'
 
 export type TestSpec = types.TestSpec
 export type TestResult = types.TestResult
@@ -15,136 +16,126 @@ type RunOptions = {
 const function runnable_test_spec(
 	name: string,
 	mode: 'run' | 'skip' | 'only',
-	fn: () -> ()
+	fn: () -> (),
+	scope: types.TestScope?
 ): TestSpec
 	return {
 		name = name,
 		mode = mode,
 		fn = fn,
-	}
+		scope = scope,
+	} :: TestSpec
 end
 
 const function todo_test_spec(name: string): TestSpec
 	return {
 		name = name,
 		mode = 'todo',
+	} :: TestSpec
+end
+
+const function test_scope(name: string): types.TestScope
+	return {
+		name = name,
+		hooks = {
+			before_all = {},
+			before_each = {},
+			after_each = {},
+			after_all = {},
+		},
 	}
-end
-
-const function has_only_tests(tests: { TestSpec }): boolean
-	for _, test in tests do
-		if test.mode == 'only' then return true end
-	end
-
-	return false
-end
-
-const function should_skip_for_focus(
-	test: TestSpec,
-	options: RunOptions
-): boolean
-	if not options.focus_only then return false end
-	if test.mode == 'only' then return false end
-	if test.mode == 'todo' then return false end
-
-	return true
 end
 
 const function shorten_workspace_paths(message: string): string
 	const normalized_cwd = path_utils.cwd()
 	const backslash_cwd = normalized_cwd:gsub('/', '\\')
-
 	local shortened = message
 	shortened = shortened:gsub(normalized_cwd .. '/', '')
 	shortened = shortened:gsub(backslash_cwd .. '\\', '')
-
 	return shortened
 end
 
-const function run_test(test: TestSpec): TestResult
-	if test.mode == 'skip' then
-		return {
-			name = test.name,
-			kind = 'skipped',
-		}
+const function run(suite: TestSuite, options: RunOptions?): TestSuiteResult
+	const result = executor.run(suite, options)
+	for _, test_result in result.results do
+		if test_result.kind ~= 'failed' then continue end
+		test_result.error_message =
+			shorten_workspace_paths(test_result.error_message)
 	end
-
-	if test.mode == 'todo' then
-		return {
-			name = test.name,
-			kind = 'todo',
-		}
+	for _, failure in result.lifecycle_failures or {} do
+		failure.error_message =
+			shorten_workspace_paths(failure.error_message)
 	end
+	return result
+end
 
-	const ok: boolean, result = (pcall :: any)(function()
-		test.fn()
+t.test('should run suite hooks around each test', function()
+	const events = {} :: { string }
+	const scope = test_scope 'Inventory'
+	table.insert(scope.hooks.before_all, function()
+		table.insert(events, 'before all')
+	end)
+	table.insert(scope.hooks.before_each, function()
+		table.insert(events, 'before each')
+	end)
+	table.insert(scope.hooks.after_each, function()
+		table.insert(events, 'after each')
+	end)
+	table.insert(scope.hooks.after_all, function()
+		table.insert(events, 'after all')
 	end)
 
-	if ok then return {
-		name = test.name,
-		kind = 'passed',
-	} end
-
-	return {
-		name = test.name,
-		kind = 'failed',
-		error_message = shorten_workspace_paths(tostring(result)),
+	const result = run {
+		name = 'inventory.luau',
+		tests = {
+			runnable_test_spec('first', 'run', function()
+				table.insert(events, 'first')
+			end, scope),
+			runnable_test_spec('second', 'run', function()
+				table.insert(events, 'second')
+			end, scope),
+		},
 	}
-end
 
-const function run(suite: TestSuite, options: RunOptions?): TestSuiteResult
-	const results = {} :: { TestResult }
-	const total_tests = #suite.tests
-	local passed = 0
-	local failed = 0
-	local skipped = 0
-	local todo = 0
-	const resolved_options = options
-		or {
-			focus_only = has_only_tests(suite.tests),
-		}
+	assert(
+		table.concat(events, ', ')
+			== 'before all, before each, first, after each, before each, second, after each, after all'
+	)
+	assert(result.passed_tests == 2)
+	assert(result.results[1].name == 'Inventory > first')
+end)
 
-	for _, test in suite.tests do
-		const test_result = if should_skip_for_focus(
-				test,
-				resolved_options
-			)
-			then {
-				name = test.name,
-				kind = 'skipped',
-			} :: TestResult
-			else run_test(test)
-
-		table.insert(results, test_result)
-
-		if test_result.kind == 'passed' then
-			passed += 1
-			continue
-		end
-
-		if test_result.kind == 'failed' then
-			failed += 1
-			continue
-		end
-
-		if test_result.kind == 'skipped' then
-			skipped += 1
-			continue
-		end
-
-		todo += 1
+t.test('should report before all once and skip affected tests', function()
+	const scope = test_scope 'Inventory'
+	const failing_hook: types.HookFn = function()
+		error 'database unavailable'
 	end
+	table.insert(scope.hooks.before_all, failing_hook)
 
-	return {
-		name = suite.name,
-		total_tests = total_tests,
-		passed_tests = passed,
-		failed_tests = failed,
-		skipped_tests = skipped,
-		todo_tests = todo,
-		results = results,
+	const result = run {
+		name = 'inventory.luau',
+		tests = {
+			runnable_test_spec(
+				'first',
+				'run',
+				function(): () end,
+				scope
+			),
+			runnable_test_spec(
+				'second',
+				'run',
+				function(): () end,
+				scope
+			),
+		},
 	}
-end
+
+	assert(result.skipped_tests == 2)
+	assert(result.failed_tests == 0)
+	const failures = result.lifecycle_failures or {}
+	assert(#failures == 1)
+	assert(failures[1].hook_name == 'before_all')
+end)
 
 t.test('should focus on only tests', function()
 	local ran_non_only = false

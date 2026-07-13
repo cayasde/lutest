@@ -40,17 +40,24 @@ function inventory.add(state, item_id: string, quantity: number): boolean
 	return true
 end
 
-t.test('should reject an item stack above its catalog limit', function()
-	local bag = inventory.new(2)
-	assert(inventory.add(bag, 'potion', 5))
-	assert(not inventory.add(bag, 'potion', 1))
-	assert(inventory.quantity(bag, 'potion') == 5)
-end)
+t.suite('Inventory', function()
+	local bag
 
-t.test('should reject a new item when the inventory is full', function()
-	local bag = inventory.new(1)
-	assert(inventory.add(bag, 'apple', 1))
-	assert(not inventory.add(bag, 'potion', 1))
+	t.before_each(function()
+		bag = inventory.new(2)
+	end)
+
+	t.test('should reject an item stack above its catalog limit', function()
+		assert(inventory.add(bag, 'potion', 5))
+		assert(not inventory.add(bag, 'potion', 1))
+		assert(inventory.quantity(bag, 'potion') == 5)
+	end)
+
+	t.test('should reject a new item when the inventory is full', function()
+		bag = inventory.new(1)
+		assert(inventory.add(bag, 'apple', 1))
+		assert(not inventory.add(bag, 'potion', 1))
+	end)
 end)
 
 return inventory

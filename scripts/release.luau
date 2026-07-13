@@ -23,6 +23,7 @@ const EMBEDDED_LIBRARY_FILES = {
 	'lib/context.luau',
 	'lib/registry.luau',
 	'core/types.luau',
+	'core/executor.luau',
 }
 const ROBLOX_BUNDLE_SCRIPT_PATH = 'scripts/build-roblox-bundle.luau'
 const RELEASE_SELF_TEST_METHODS = {

@@ -4,9 +4,14 @@ const t = require '@lutest_release'
 
 export type TestSuiteResult = types.TestSuiteResult
 export type FailedTestResult = types.FailedTestResult
-type TodoSuite = {
+export type TodoTest = {
 	name: string,
-	tests: { types.TodoTestSpec },
+	mode: 'todo',
+}
+
+export type TodoSuite = {
+	name: string,
+	tests: { TodoTest },
 }
 
 type RunResult = {
@@ -132,13 +137,36 @@ end
 
 const function format_run_result(results: { TestSuiteResult }): string
 	const run_result = collect_run_result(results)
-	const summary = format_summary(run_result)
+	local lifecycle_count = 0
+	for _, result in results do
+		lifecycle_count += #(result.lifecycle_failures or {})
+	end
+	local summary = format_summary(run_result)
+	if lifecycle_count > 0 then
+		summary ..= `  {ui.failed(`{lifecycle_count} hook failures`)}`
+	end
 
-	if run_result.failed_tests == 0 then return summary end
+	if run_result.failed_tests == 0 and lifecycle_count == 0 then
+		return summary
+	end
 	const lines = { summary, '' }
 
 	for _, suite_result in results do
 		append_failed_details(lines, suite_result)
+		for _, failure in suite_result.lifecycle_failures or {} do
+			table.insert(
+				lines,
+				ui.section(
+					`{failure.suite_name} > {failure.hook_name}`
+				)
+			)
+			table.insert(lines, `  {ui.muted(suite_result.name)}`)
+			table.insert(
+				lines,
+				`  {failure.error_message:gsub('\n', '\n  ')}`
+			)
+			table.insert(lines, '')
+		end
 	end
 
 	return table.concat(lines, '\n')

@@ -40,6 +40,7 @@ const function load_failures_as_results(
 			skipped_tests = 0,
 			todo_tests = 0,
 			results = { test_result },
+			lifecycle_failures = {},
 		}
 		table.insert(results, result)
 	end

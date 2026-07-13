@@ -4,6 +4,9 @@ const t = require '@lutest_release'
 
 export type TestSpec = types.TestSpec
 export type TestMode = types.TestMode
+export type HookFn = types.HookFn
+export type SuiteHooks = types.SuiteHooks
+export type TestScope = types.TestScope
 export type RunnableTestMode = types.RunnableTestMode
 export type RunnableTestSpec = types.RunnableTestSpec
 export type TodoTestSpec = types.TodoTestSpec

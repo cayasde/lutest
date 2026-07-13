@@ -11,8 +11,8 @@ const lute = require '@runtimes/lute'
 const config = require '@runtimes/lute/config'
 const roblox = require '@runtimes/roblox'
 
-type TodoTest = todo.TodoTest
-type TodoSuite = todo.TodoSuite
+type TodoTest = reporter.TodoTest
+type TodoSuite = reporter.TodoSuite
 
 const function collect_cli_args(): { string }
 	const args = {} :: { string }
@@ -27,6 +27,7 @@ end
 const function has_failures(results: { reporter.TestSuiteResult }): boolean
 	for _, result in results do
 		if result.failed_tests > 0 then return true end
+		if #(result.lifecycle_failures or {}) > 0 then return true end
 	end
 
 	return false
@@ -44,11 +45,15 @@ const function collect_todo_suites(paths: { string }): { TodoSuite }
 
 		for _, test in suite.tests do
 			if test.mode ~= 'todo' then continue end
+			const scope = test.scope
+			const name = if scope == nil
+				then test.name
+				else `{scope.name} > {test.name}`
 
 			table.insert(
 				todo_tests,
 				{
-					name = test.name,
+					name = name,
 					mode = 'todo',
 				} :: TodoTest
 			)

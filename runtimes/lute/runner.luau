@@ -73,6 +73,15 @@ const function should_use_embedded_release_api(
 end
 
 const function create_embedded_release_api(): ReleaseApi
+	local active_scope = nil :: core.TestScope?
+
+	const function scope_or_error(): core.TestScope
+		const scope = active_scope
+		if scope ~= nil then return scope end
+
+		error('Hooks can only be registered inside t.suite().', 2)
+	end
+
 	const function register_spec(spec: TestSpec)
 		if context.register(spec) then return end
 		if not registry.is_active() then return end
@@ -85,7 +94,8 @@ const function create_embedded_release_api(): ReleaseApi
 			name = name,
 			mode = 'run',
 			fn = fn,
-		}
+			scope = active_scope,
+		} :: TestSpec
 
 		register_spec(spec)
 		return spec
@@ -96,7 +106,8 @@ const function create_embedded_release_api(): ReleaseApi
 			name = name,
 			mode = 'skip',
 			fn = fn,
-		}
+			scope = active_scope,
+		} :: TestSpec
 
 		register_spec(spec)
 		return spec
@@ -107,7 +118,8 @@ const function create_embedded_release_api(): ReleaseApi
 			name = name,
 			mode = 'only',
 			fn = fn,
-		}
+			scope = active_scope,
+		} :: TestSpec
 
 		register_spec(spec)
 		return spec
@@ -117,10 +129,48 @@ const function create_embedded_release_api(): ReleaseApi
 		const spec = {
 			name = name,
 			mode = 'todo',
-		}
+			scope = active_scope,
+		} :: TestSpec
 
 		register_spec(spec)
 		return spec
+	end
+
+	const function suite(name: string, register: () -> ())
+		if active_scope ~= nil then
+			error('Nested t.suite() calls are not supported.', 2)
+		end
+
+		const scope = {
+			name = name,
+			hooks = {
+				before_all = {},
+				before_each = {},
+				after_each = {},
+				after_all = {},
+			},
+		} :: core.TestScope
+
+		active_scope = scope
+		const ok, result = (pcall :: any)(register)
+		active_scope = nil
+		if not ok then error(result, 0) end
+	end
+
+	const function before_all(hook: core.HookFn)
+		table.insert(scope_or_error().hooks.before_all, hook)
+	end
+
+	const function before_each(hook: core.HookFn)
+		table.insert(scope_or_error().hooks.before_each, hook)
+	end
+
+	const function after_each(hook: core.HookFn)
+		table.insert(scope_or_error().hooks.after_each, hook)
+	end
+
+	const function after_all(hook: core.HookFn)
+		table.insert(scope_or_error().hooks.after_all, hook)
 	end
 
 	return {
@@ -128,6 +178,11 @@ const function create_embedded_release_api(): ReleaseApi
 		skip = skip,
 		only = only,
 		todo = todo,
+		suite = suite,
+		before_all = before_all,
+		before_each = before_each,
+		after_each = after_each,
+		after_all = after_all,
 	}
 end
 
