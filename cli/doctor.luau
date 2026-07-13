@@ -130,16 +130,12 @@ const function inspect(
 	project: ProjectConfig,
 	options: DoctorOptions
 ): DoctorReport
-	local lines = { ui.section 'Lutest doctor', '' } :: { string }
+	local lines = {} :: { string }
 	append_configuration(lines, options)
 
 	const lute_ready = append_lute_runtime(lines, project)
 	const roblox_ready = append_roblox_runtime(lines, project, options)
 	const ready = lute_ready and roblox_ready
-	if ready then
-		table.insert(lines, '')
-		table.insert(lines, ui.passed 'Local environment ready')
-	end
 
 	return {
 		ready = ready,
