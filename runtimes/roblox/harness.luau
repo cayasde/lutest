@@ -71,8 +71,18 @@ local function mount_bundled_library()
 	return context
 end
 
-local runtime_context = require(mount_bundled_library())
+local context_module = mount_bundled_library()
+local runtime_context = require(context_module)
 local test_api = require(]] .. input.require_path .. [[)
+local core_folder = context_module.Parent:FindFirstChild("core")
+if core_folder == nil then
+	error("Lutest core runtime was not present in the deserialized bundle.")
+end
+local executor_module = core_folder:FindFirstChild("executor")
+if executor_module == nil then
+	error("Lutest suite executor was not present in the deserialized bundle.")
+end
+local test_executor = require(executor_module)
 
 local function find_module(relative_path)
 	local current = bundle_root
@@ -87,32 +97,16 @@ local function find_module(relative_path)
 end
 
 local function run_suite(name, tests)
-	local focus_only = false
-	for _, test in tests do
-		if test.mode == "only" then
-			focus_only = true
-			break
-		end
+	if mode == "test" then
+		return test_executor.run({ name = name, tests = tests })
 	end
 
 	local results = {}
 	local counts = { passed = 0, failed = 0, skipped = 0, todo = 0 }
 	for _, test in tests do
-		local result
-		if test.mode == "todo" then
-			result = { name = test.name, kind = "todo" }
-		elseif test.mode == "skip" or (focus_only and test.mode ~= "only") then
-			result = { name = test.name, kind = "skipped" }
-		elseif mode == "todo" then
-			result = { name = test.name, kind = "skipped" }
-		else
-			local ok, err = pcall(test.fn)
-			result = if ok then { name = test.name, kind = "passed" } else {
-				name = test.name,
-				kind = "failed",
-				error_message = tostring(err),
-			}
-		end
+		local result = if test.mode == "todo"
+			then { name = test.name, kind = "todo" }
+			else { name = test.name, kind = "skipped" }
 		table.insert(results, result)
 		counts[result.kind] += 1
 	end
@@ -125,6 +119,7 @@ local function run_suite(name, tests)
 		skipped_tests = counts.skipped,
 		todo_tests = counts.todo,
 		results = results,
+		lifecycle_failures = {},
 	}
 end
 
@@ -183,6 +178,7 @@ t.test('should generate a harness that emits one versioned envelope', function()
 	assert(source:find('entry.Name = segments[#segments]', 1, true) ~= nil)
 	assert(source:find('existing:Destroy()', 1, true) ~= nil)
 	assert(source:find('runtime_context.set_register', 1, true) ~= nil)
+	assert(source:find('suite executor', 1, true) ~= nil)
 	assert(source:find('test_api.set_runtime_register', 1, true) == nil)
 	assert(source:find('must be ModuleScripts', 1, true) ~= nil)
 end)

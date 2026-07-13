@@ -8,6 +8,12 @@ export type TestResult = {
 	error_message: string?,
 }
 
+export type LifecycleFailure = {
+	suite_name: string,
+	hook_name: string,
+	error_message: string,
+}
+
 export type TestSuiteResult = {
 	name: string,
 	total_tests: number,
@@ -16,6 +22,7 @@ export type TestSuiteResult = {
 	skipped_tests: number,
 	todo_tests: number,
 	results: { TestResult },
+	lifecycle_failures: { LifecycleFailure },
 }
 
 export type LoadFailure = {
@@ -118,6 +125,29 @@ const function decode_suite(value: json.Value): TestSuiteResult
 	for _, result in array(suite.results, 'suite.results') do
 		table.insert(results, decode_result(result))
 	end
+	const lifecycle_failures = {} :: { LifecycleFailure }
+	const encoded_failures = suite.lifecycle_failures
+	if encoded_failures ~= nil then
+		for _, failure in
+			array(encoded_failures, 'suite.lifecycle_failures')
+		do
+			const decoded = object(failure, 'lifecycle failure')
+			table.insert(lifecycle_failures, {
+				suite_name = string_value(
+					decoded.suite_name,
+					'lifecycle failure.suite_name'
+				),
+				hook_name = string_value(
+					decoded.hook_name,
+					'lifecycle failure.hook_name'
+				),
+				error_message = string_value(
+					decoded.error_message,
+					'lifecycle failure.error_message'
+				),
+			})
+		end
+	end
 
 	return {
 		name = string_value(suite.name, 'suite.name'),
@@ -139,6 +169,7 @@ const function decode_suite(value: json.Value): TestSuiteResult
 		),
 		todo_tests = number_value(suite.todo_tests, 'suite.todo_tests'),
 		results = results,
+		lifecycle_failures = lifecycle_failures,
 	}
 end
 

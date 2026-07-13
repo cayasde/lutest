@@ -1,15 +1,8 @@
 const reporter = require '@self/reporter'
 const t = require '@lutest_release'
 
-export type TodoTest = {
-	name: string,
-	mode: 'todo',
-}
-
-export type TodoSuite = {
-	name: string,
-	tests: { TodoTest },
-}
+export type TodoTest = reporter.TodoTest
+export type TodoSuite = reporter.TodoSuite
 
 const function collect_remote_todo_suites(
 	results: { reporter.TestSuiteResult }

@@ -5,6 +5,18 @@ const t = require '@lutest_release'
 
 export type TestSpec = types.TestSpec
 export type TestMode = types.TestMode
+export type HookFn = types.HookFn
+export type SuiteHooks = types.SuiteHooks
+export type TestScope = types.TestScope
+
+local active_scope = nil :: TestScope?
+
+const function scope_or_error(): TestScope
+	const scope = active_scope
+	if scope ~= nil then return scope end
+
+	error('Hooks can only be registered inside t.suite().', 2)
+end
 
 const function register_spec(spec: TestSpec)
 	if context.register(spec) then return end
@@ -18,6 +30,7 @@ const function test(name: string, fn: () -> ()): TestSpec
 		name = name,
 		mode = 'run',
 		fn = fn,
+		scope = active_scope,
 	}
 
 	register_spec(spec)
@@ -29,6 +42,7 @@ const function skip(name: string, fn: () -> ()): TestSpec
 		name = name,
 		mode = 'skip',
 		fn = fn,
+		scope = active_scope,
 	}
 
 	register_spec(spec)
@@ -40,6 +54,7 @@ const function only(name: string, fn: () -> ()): TestSpec
 		name = name,
 		mode = 'only',
 		fn = fn,
+		scope = active_scope,
 	}
 
 	register_spec(spec)
@@ -50,10 +65,48 @@ const function todo(name: string): TestSpec
 	const spec = {
 		name = name,
 		mode = 'todo',
+		scope = active_scope,
 	}
 
 	register_spec(spec)
 	return spec
+end
+
+const function suite(name: string, register: () -> ())
+	if active_scope ~= nil then
+		error('Nested t.suite() calls are not supported.', 2)
+	end
+
+	const scope = {
+		name = name,
+		hooks = {
+			before_all = {},
+			before_each = {},
+			after_each = {},
+			after_all = {},
+		},
+	} :: TestScope
+
+	active_scope = scope
+	const ok, result = (pcall :: any)(register)
+	active_scope = nil
+	if not ok then error(result, 0) end
+end
+
+const function before_all(hook: HookFn)
+	table.insert(scope_or_error().hooks.before_all, hook)
+end
+
+const function before_each(hook: HookFn)
+	table.insert(scope_or_error().hooks.before_each, hook)
+end
+
+const function after_each(hook: HookFn)
+	table.insert(scope_or_error().hooks.after_each, hook)
+end
+
+const function after_all(hook: HookFn)
+	table.insert(scope_or_error().hooks.after_all, hook)
 end
 
 t.test('should prefer runtime register hook over local registry', function()
@@ -180,11 +233,47 @@ t.test('should return the created spec from each public helper', function()
 	assert(todo_spec.mode == 'todo')
 end)
 
+t.test('should register suite tests with their lexical scope', function()
+	const previous_hook = context.get_register()
+	context.clear_register()
+	registry.clear()
+	registry.begin 'suite-module'
+
+	suite('Inventory', function()
+		before_each(function() end)
+		test('adds an item', function() end)
+	end)
+
+	const specs = registry.collect 'suite-module'
+	context.set_register(previous_hook)
+
+	assert(#specs == 1)
+	const scope = specs[1].scope
+	assert(scope ~= nil)
+	assert(scope.name == 'Inventory')
+	assert(#scope.hooks.before_each == 1)
+	registry.clear()
+end)
+
+t.test('should reject hooks outside a suite', function()
+	const ok, message = pcall(function()
+		before_each(function() end)
+	end)
+
+	assert(ok == false)
+	assert(tostring(message):find('inside t.suite()', 1, true) ~= nil)
+end)
+
 const api = {
 	test = test,
 	skip = skip,
 	only = only,
 	todo = todo,
+	suite = suite,
+	before_all = before_all,
+	before_each = before_each,
+	after_each = after_each,
+	after_all = after_all,
 }
 
 t.test('should keep the runtime register outside the public API', function()

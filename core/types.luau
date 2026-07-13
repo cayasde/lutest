@@ -1,5 +1,18 @@
 export type TestMode = 'run' | 'skip' | 'only' | 'todo'
 export type TestFn = () -> ()
+export type HookFn = () -> ()
+
+export type SuiteHooks = {
+	before_all: { HookFn },
+	before_each: { HookFn },
+	after_each: { HookFn },
+	after_all: { HookFn },
+}
+
+export type TestScope = {
+	name: string,
+	hooks: SuiteHooks,
+}
 
 export type RunnableTestMode = 'run' | 'skip' | 'only'
 
@@ -7,11 +20,13 @@ export type RunnableTestSpec = {
 	name: string,
 	mode: RunnableTestMode,
 	fn: TestFn,
+	scope: TestScope?,
 }
 
 export type TodoTestSpec = {
 	name: string,
 	mode: 'todo',
+	scope: TestScope?,
 }
 
 export type TestSpec = RunnableTestSpec | TodoTestSpec
@@ -36,6 +51,12 @@ export type TestResultMap = {
 	},
 }
 
+export type LifecycleFailure = {
+	suite_name: string,
+	hook_name: string,
+	error_message: string,
+}
+
 export type TestResultKind = keyof<TestResultMap>
 export type PassedTestResult = index<TestResultMap, 'passed'>
 export type FailedTestResult = index<TestResultMap, 'failed'>
@@ -56,6 +77,7 @@ export type TestSuiteResult = {
 	skipped_tests: number,
 	todo_tests: number,
 	results: { TestResult },
+	lifecycle_failures: { LifecycleFailure }?,
 }
 
 export type TestRunner = {

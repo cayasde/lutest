@@ -13,6 +13,7 @@ const SOURCE_FILES = {
 	'lib/context.luau',
 	'lib/registry.luau',
 	'core/types.luau',
+	'core/executor.luau',
 }
 
 const function strip_self_tests(source: string): string
@@ -53,6 +54,11 @@ const function transform_source(
 		transformed = transformed:gsub(
 			'require \'@self/context\'',
 			`require({root}.context)`
+		)
+	elseif source_path == 'core/executor.luau' then
+		transformed = transformed:gsub(
+			'require \'@core/types\'',
+			'require(script.Parent.types)'
 		)
 	else
 		transformed = transformed:gsub(
