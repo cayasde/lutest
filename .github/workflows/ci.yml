@@ -8,6 +8,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  release-decision:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Require a release decision
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HAS_NO_RELEASE_LABEL: >-
+            ${{ contains(github.event.pull_request.labels.*.name, 'no-release') }}
+        run: |
+          if [ "$HAS_NO_RELEASE_LABEL" = "true" ]; then
+            exit 0
+          fi
+
+          changeset_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '^\.changeset/[^/]+\.md$' \
+            | grep -v '^\.changeset/README\.md$' || true)
+
+          if [ -n "$changeset_files" ]; then
+            exit 0
+          fi
+
+          echo "A pull request needs a Changeset or the no-release label."
+          exit 1
+
   quality:
     runs-on: ubuntu-latest
 
