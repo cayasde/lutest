@@ -359,8 +359,11 @@ const function create_suite(module_path: string, tests: { TestSpec }): TestSuite
 	}
 end
 
-const function collect_suites(paths: { string }): { TestSuite }
-	const project_config = config.load_config(path_utils.cwd())
+const function collect_suites(
+	paths: { string },
+	config_path: string?
+): { TestSuite }
+	const project_config = config.load_config(config_path)
 	const suites = {} :: { TestSuite }
 
 	for _, module_path in paths do
@@ -389,8 +392,11 @@ const function has_only_tests(suites: { TestSuite }): boolean
 	return false
 end
 
-const function run_file(module_path: string): { TestSuiteResult }
-	const project_config = config.load_config(path_utils.cwd())
+const function run_file(
+	module_path: string,
+	config_path: string?
+): { TestSuiteResult }
+	const project_config = config.load_config(config_path)
 	const resolved_module_path = path_utils.resolve_from_cwd(module_path)
 	const _, tests = load_module(resolved_module_path, project_config)
 	if #tests == 0 then
@@ -401,8 +407,11 @@ const function run_file(module_path: string): { TestSuiteResult }
 	return { core.run(create_suite(resolved_module_path, tests)) }
 end
 
-const function run_files(paths: { string }): { TestSuiteResult }
-	const suites = collect_suites(paths)
+const function run_files(
+	paths: { string },
+	config_path: string?
+): { TestSuiteResult }
+	const suites = collect_suites(paths, config_path)
 	const suite_results = {} :: { TestSuiteResult }
 	const resolved_focus_only = has_only_tests(suites)
 
@@ -418,8 +427,14 @@ const function run_files(paths: { string }): { TestSuiteResult }
 	return suite_results
 end
 
-const function run_discovered(paths: { string }): { TestSuiteResult }
-	return run_files(discovery.discover_files(paths))
+const function run_discovered(
+	paths: { string },
+	config_path: string?
+): { TestSuiteResult }
+	return run_files(
+		discovery.discover_files(paths, config_path),
+		config_path
+	)
 end
 
 t.test('should not register tests from required dependencies', function()

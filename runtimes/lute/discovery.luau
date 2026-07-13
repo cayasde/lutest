@@ -411,12 +411,15 @@ const function discover_path(
 	end
 end
 
-const function discover_files(paths: { string }): { string }
+const function discover_files(
+	paths: { string },
+	config_path: string?
+): { string }
 	const discovered = {} :: { string }
 	const seen = {} :: SeenMap
 	const cwd = path_utils.cwd()
 	const gitignore_rules = load_gitignore_rules(cwd)
-	const project_config = config.load_config(cwd)
+	const project_config = config.load_config(config_path)
 
 	for _, input in resolve_input_paths(paths, project_config) do
 		discover_path(
