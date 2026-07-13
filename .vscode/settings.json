@@ -19,5 +19,18 @@
     "vendor/tint",
     "vendor/pesde",
     "vendor/darklua"
-  ]
+  ],
+  "search.exclude": {
+    "**/vendor": true,
+    "**/node_modules": true,
+    "**/luau_packages": true,
+    "**/Packages": true,
+    "**/.git": true,
+    "**/.tmp": true,
+    "**/dist": true,
+    "**/.cache": true,
+    "**/.codex": true,
+    "**/.vscode": true,
+    "*.html": true
+  }
 }
