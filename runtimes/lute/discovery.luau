@@ -158,6 +158,23 @@ const function matches_test_require(
 	return argument.token.text == test_require_path
 end
 
+const function escape_pattern(value: string): string
+	return (value:gsub('([^%w])', '%%%1'))
+end
+
+const function source_mentions_test_require(
+	source: string,
+	test_require_path: string
+): boolean
+	const parenthesized_pattern =
+		`require%s*%(%s*['"]{escape_pattern(test_require_path)}['"]`
+	if source:find(parenthesized_pattern) ~= nil then return true end
+
+	const unparenthesized_pattern =
+		`require%s+['"]{escape_pattern(test_require_path)}['"]`
+	return source:find(unparenthesized_pattern) ~= nil
+end
+
 const function depends_on_test_lib(
 	filepath: string,
 	test_require_path: string
@@ -173,7 +190,25 @@ const function depends_on_test_lib(
 		return parse_error
 	end)
 
-	if not ok then return false end
+	if not ok then
+		if
+			not source_mentions_test_require(
+				source,
+				test_require_path
+			)
+		then
+			return false
+		end
+
+		error(
+			errors.runtime_error('Test file could not be parsed.', {
+				where = path_utils.relative_to_cwd(filepath),
+				how_to_fix = 'Fix the syntax error in this test file and run again.',
+				details = parse_error,
+			}),
+			0
+		)
+	end
 
 	const ast = parse_result :: syntax.ParseResult
 	return #query.findAllFromRoot(ast, function(node)
@@ -1069,7 +1104,7 @@ end)
 	fs.removeDirectory(temp_cwd, { recursive = true })
 end)
 
-t.test('should skip unparsable modules during discovery', function()
+t.test('should report syntax errors in candidate test files', function()
 	const temp_root =
 		path_utils.resolve_path(path_utils.cwd(), 'dist/test-tmp')
 	const temp_cwd = path_utils.resolve_path(
@@ -1087,7 +1122,7 @@ t.test('should skip unparsable modules during discovery', function()
 	fs.writeStringToFile(
 		invalid_module,
 		[[
-local t = require("@lutest_release")
+local t = require '@lutest_release'
 
 t.test("should break", function()
 	assert(true)
@@ -1095,27 +1130,35 @@ end
 ]]
 	)
 
-	const discovered = {} :: { string }
-	const seen = {} :: SeenMap
+	local message = nil :: string?
+	const ok = xpcall(function()
+		discover_path(
+			{},
+			{},
+			{
+				path = invalid_module,
+				source = 'cli',
+			},
+			temp_cwd,
+			{},
+			{
+				roots = { '.' },
+				ignore = {},
+				require = '@lutest_release',
+				gitignore = false,
+			}
+		)
+	end, function(err)
+		message = tostring(err)
+		return message
+	end)
 
-	discover_path(
-		discovered,
-		seen,
-		{
-			path = invalid_module,
-			source = 'cli',
-		},
-		temp_cwd,
-		{},
-		{
-			roots = { '.' },
-			ignore = {},
-			require = '@lutest_release',
-			gitignore = false,
-		}
-	)
-
-	assert(#discovered == 0)
+	assert(ok == false)
+	assert(message ~= nil)
+	message = errors.strip_ansi(errors.display_error(message))
+	assert(message:find('Test file could not be parsed.', 1, true) ~= nil)
+	assert(message:find('broken.luau', 1, true) ~= nil)
+	assert(message:find('> Details', 1, true) ~= nil)
 
 	fs.removeDirectory(temp_cwd, { recursive = true })
 end)
