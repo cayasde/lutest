@@ -1,5 +1,6 @@
 const process = require '@std/process'
 const errors = require '@core/errors'
+const tty = require '@lutest/utils/tty'
 const command = require '@self/command'
 const doctor = require '@self/doctor'
 const help = require '@self/help'
@@ -117,6 +118,7 @@ const function main()
 	local dry_run_runtime = nil :: ('lute' | 'roblox')?
 	local doctor_report = nil :: doctor.DoctorReport?
 	local runtime_error = nil :: string?
+	local selected_runtime = nil :: ('lute' | 'roblox')?
 	const ok = xpcall(function()
 		if parsed_command.kind == 'setup' then
 			setup.run()
@@ -134,6 +136,7 @@ const function main()
 					parsed_command.config_path
 				)
 			)
+		selected_runtime = runtime
 		if parsed_command.dry_run then
 			dry_run_files = discover_dry_run_files(
 				parsed_command.paths :: { string },
@@ -237,7 +240,11 @@ const function main()
 		process.exit(1)
 	end
 
-	reporter.print_run_result(resolved_results)
+	const summary_prefix = if selected_runtime == 'roblox'
+			and not tty.stdout_is_tty()
+		then roblox.non_interactive_prefix()
+		else nil
+	reporter.print_run_result(resolved_results, summary_prefix)
 
 	process.exit(if has_failures(resolved_results) then 1 else 0)
 end

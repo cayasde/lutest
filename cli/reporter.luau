@@ -136,7 +136,10 @@ const function append_failed_details(
 	end
 end
 
-const function format_run_result(results: { TestSuiteResult }): string
+const function format_run_result(
+	results: { TestSuiteResult },
+	prefix: string?
+): string
 	const run_result = collect_run_result(results)
 	local lifecycle_count = 0
 	for _, result in results do
@@ -148,9 +151,10 @@ const function format_run_result(results: { TestSuiteResult }): string
 	end
 
 	if run_result.failed_tests == 0 and lifecycle_count == 0 then
-		return summary
+		return if prefix == nil then summary else `{prefix} {summary}`
 	end
-	const lines = { summary, '' }
+	const lines =
+		{ if prefix == nil then summary else `{prefix} {summary}`, '' }
 
 	for _, suite_result in results do
 		append_failed_details(lines, suite_result)
@@ -173,8 +177,8 @@ const function format_run_result(results: { TestSuiteResult }): string
 	return table.concat(lines, '\n')
 end
 
-const function print_run_result(results: { TestSuiteResult })
-	print(format_run_result(results))
+const function print_run_result(results: { TestSuiteResult }, prefix: string?)
+	print(format_run_result(results, prefix))
 end
 
 const function collect_todo_count(todo_suites: { TodoSuite }): number
@@ -388,6 +392,21 @@ t.test('should format an empty run summary', function()
 	assert(output:find('0 skipped', 1, true) == nil)
 	assert(output:find('0 todo', 1, true) == nil)
 	assert(output:find('\n', 1, true) == nil)
+end)
+
+t.test('should prefix a non-interactive run summary', function()
+	const output = format_run_result({
+		suite_result('runtimes/roblox/progress.luau', {
+			total_tests = 2,
+			passed_tests = 2,
+			failed_tests = 0,
+			skipped_tests = 0,
+			todo_tests = 0,
+		}),
+	}, 'lutest(roblox)@0.5.0')
+
+	const plain_output = output:gsub('\27%[[0-9;]*m', '')
+	assert(plain_output == 'lutest(roblox)@0.5.0 + 2 tests passed')
 end)
 
 t.test('should omit non-failed details from failed output', function()
