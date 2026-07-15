@@ -3,6 +3,7 @@ const credentials = require '@self/credentials'
 const discovery = require '@self/discovery'
 const harness = require '@self/harness'
 const open_cloud = require '@self/open_cloud'
+const output = require '@self/output'
 const progress = require '@self/progress'
 const protocol = require '@self/protocol'
 const config = require '@runtimes/lute/config'
@@ -121,5 +122,6 @@ end)
 
 return {
 	discover_files = discover_files,
+	non_interactive_prefix = output.non_interactive_prefix,
 	run = run,
 }

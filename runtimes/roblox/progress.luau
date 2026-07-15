@@ -1,6 +1,6 @@
 const io = require '@std/io'
 const task = require '@std/task'
-const version = require '@core/version'
+const output = require '@self/output'
 const tty = require '@lutest/utils/tty'
 const ui = require '@lutest/utils/ui'
 const t = require '@lutest_release'
@@ -21,7 +21,7 @@ const STAGE_COUNT = 5
 const function plain_message(stage: string): string
 	const index = STAGE_INDEX[stage]
 	assert(index ~= nil, `Unknown Roblox progress stage '{stage}'.`)
-	return `lutest({ui.accent 'roblox'})@{version.VALUE} [{index}/{STAGE_COUNT}] {stage}`
+	return `{output.non_interactive_prefix()} [{index}/{STAGE_COUNT}] {stage}`
 end
 
 const function create(is_tty: boolean, output: Output?)
