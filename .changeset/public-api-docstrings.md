@@ -2,4 +2,4 @@
 'lutest': patch
 ---
 
-Add editor documentation for the public `t` API.
+Add editor documentation for the public Lutest library API.

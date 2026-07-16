@@ -18,7 +18,7 @@ Prefer external tools resolved from the environment, explicit arguments, or dedi
 
 ## Public API documentation
 
-Keep public `t` API members documented with Luau LSP documentation comments
+Keep public Lutest library API members documented with Luau LSP documentation comments
 attached directly to their exported table properties. Use concise Moonwave-style
 Markdown with `@param` and `@return` entries for public function arguments and
 return values, plus prose for behavior and constraints. When adding a public

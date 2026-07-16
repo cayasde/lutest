@@ -298,22 +298,22 @@ const api = {
 	--- Registers a hook that runs once before the suite's tests.
 	---
 	--- @param hook HookFn -- Callback run before all suite tests.
-	--- Must be called inside `t.suite`.
+	--- Must be called inside a suite callback.
 	before_all = before_all,
 	--- Registers a hook that runs before each suite test.
 	---
 	--- @param hook HookFn -- Callback run before each suite test.
-	--- Must be called inside `t.suite`.
+	--- Must be called inside a suite callback.
 	before_each = before_each,
 	--- Registers a hook that runs after each suite test.
 	---
 	--- @param hook HookFn -- Callback run after each suite test.
-	--- Must be called inside `t.suite`.
+	--- Must be called inside a suite callback.
 	after_each = after_each,
 	--- Registers a hook that runs once after the suite's tests.
 	---
 	--- @param hook HookFn -- Callback run after all suite tests.
-	--- Must be called inside `t.suite`.
+	--- Must be called inside a suite callback.
 	after_all = after_all,
 }
 
