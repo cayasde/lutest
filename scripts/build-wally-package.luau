@@ -19,7 +19,7 @@ end
 
 const function write_package_sources()
 	for _, file in transform.files('package', source_files()) do
-		const destination = path.join(OUTPUT_ROOT, 'src', file.relative)
+		const destination = path.join(OUTPUT_ROOT, file.relative)
 		ensure_directory(path.dirname(destination))
 		fs.writeStringToFile(destination, file.source)
 	end

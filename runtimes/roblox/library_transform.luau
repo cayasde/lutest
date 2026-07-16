@@ -18,19 +18,59 @@ const function source_paths(): { string }
 end
 
 const function strip_self_tests(source: string): string
-	const test_start = source:find('\nt.test', 1, true)
-	if test_start == nil then return source end
+	local stripped = ''
+	local cursor = 1
 
-	const return_start = source:find('\nreturn ', test_start, true)
-	assert(
-		return_start ~= nil,
-		'Could not remove embedded Lutest self-tests.'
-	)
+	while true do
+		const test_start = source:find('\nt.test', cursor, true)
+		if test_start == nil then break end
 
-	local stripped = source:sub(1, (test_start :: number) - 1)
-		.. source:sub(return_start :: number)
-	stripped = stripped:gsub('const t = require \'@lutest_release\'\n', '')
-	return stripped
+		const call_start = source:find('(', test_start, true)
+		assert(
+			call_start ~= nil,
+			'Could not parse an embedded Lutest self-test.'
+		)
+
+		local depth = 0
+		local quote = nil :: string?
+		local call_end = nil :: number?
+		local index = call_start :: number
+		while index <= #source do
+			const character = source:sub(index, index)
+			if quote ~= nil then
+				if character == '\\' then
+					index += 1
+				elseif character == quote then
+					quote = nil
+				end
+			elseif
+				character == '\''
+				or character == '"'
+				or character == '`'
+			then
+				quote = character
+			elseif character == '(' then
+				depth += 1
+			elseif character == ')' then
+				depth -= 1
+				if depth == 0 then
+					call_end = index
+					break
+				end
+			end
+			index += 1
+		end
+
+		assert(
+			call_end ~= nil,
+			'Could not remove an embedded Lutest self-test.'
+		)
+		stripped ..= source:sub(cursor, test_start :: number)
+		cursor = (call_end :: number) + 1
+	end
+
+	stripped ..= source:sub(cursor)
+	return (stripped:gsub('const t = require \'@lutest_release\'\n', ''))
 end
 
 const function transform_source(
