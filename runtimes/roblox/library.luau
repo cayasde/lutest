@@ -42,6 +42,23 @@ return registry
 	assert(source:find('require(script.Parent.registry)', 1, true) ~= nil)
 end)
 
+t.test('should preserve public declarations after embedded tests', function()
+	const source = transform_source(
+		'lib/init.luau',
+		[[
+const t = require '@lutest_release'
+t.test('self test', function() end)
+const api = { test = true }
+return api
+]],
+		'package'
+	)
+
+	assert(source:find('self test', 1, true) == nil)
+	assert(source:find('const api = { test = true }', 1, true) ~= nil)
+	assert(source:find('return api', 1, true) ~= nil)
+end)
+
 t.test('should make the embedded type module requireable', function()
 	assert(
 		transform_source('core/types.luau', 'return nil', 'package')
