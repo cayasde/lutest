@@ -16,6 +16,14 @@ Do not make project scripts depend on `vendor` checkout layout or uninitialized 
 
 Prefer external tools resolved from the environment, explicit arguments, or dedicated env vars over hardcoded paths inside `vendor`.
 
+## Public API documentation
+
+Keep public `t` API members documented with Luau LSP documentation comments
+attached directly to their exported table properties. Use concise Moonwave-style
+Markdown with `@param` and `@return` entries for public function arguments and
+return values, plus prose for behavior and constraints. When adding a public
+API member or changing its behavior, update its docstring in the same change.
+
 ## Pull requests and releases
 
 Work on a `type/slug` branch and merge changes through a pull request. Do not

@@ -265,14 +265,55 @@ t.test('should reject hooks outside a suite', function()
 end)
 
 const api = {
+	--- Registers a test that runs normally.
+	---
+	--- @param name string -- Test name shown in reports.
+	--- @param fn () -> () -- Callback run as the test body.
+	--- @return TestSpec -- Registered test specification.
 	test = test,
+	--- Registers a test that is skipped.
+	---
+	--- @param name string -- Test name shown in reports.
+	--- @param fn () -> () -- Test callback, which is not run.
+	--- @return TestSpec -- Registered test specification.
 	skip = skip,
+	--- Registers a focused test.
+	---
+	--- Focused tests run while normal tests in the same run are skipped.
+	--- @param name string -- Test name shown in reports.
+	--- @param fn () -> () -- Callback run as the test body.
+	--- @return TestSpec -- Registered test specification.
 	only = only,
+	--- Registers a planned test.
+	---
+	--- @param name string -- Test name shown in reports.
+	--- @return TestSpec -- Registered todo specification without a test body.
 	todo = todo,
+	--- Groups tests and lifecycle hooks under `name`.
+	---
+	--- @param name string -- Suite name shown in reports.
+	--- @param register () -> () -- Callback that synchronously registers tests and hooks.
+	--- Nested suites are not supported.
 	suite = suite,
+	--- Registers a hook that runs once before the suite's tests.
+	---
+	--- @param hook HookFn -- Callback run before all suite tests.
+	--- Must be called inside `t.suite`.
 	before_all = before_all,
+	--- Registers a hook that runs before each suite test.
+	---
+	--- @param hook HookFn -- Callback run before each suite test.
+	--- Must be called inside `t.suite`.
 	before_each = before_each,
+	--- Registers a hook that runs after each suite test.
+	---
+	--- @param hook HookFn -- Callback run after each suite test.
+	--- Must be called inside `t.suite`.
 	after_each = after_each,
+	--- Registers a hook that runs once after the suite's tests.
+	---
+	--- @param hook HookFn -- Callback run after all suite tests.
+	--- Must be called inside `t.suite`.
 	after_all = after_all,
 }
 
