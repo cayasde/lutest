@@ -132,6 +132,9 @@ const function append_failed_details(
 			1,
 			#'load test suite:'
 		) == 'load test suite:'
+		const bundle_module_path = `LutestBundle.{suite_result.name
+			:gsub('%.luau$', '')
+			:gsub('/', '.')}`
 		local source_line = nil :: string?
 		local message = nil :: string?
 		if not is_suite_load_failure then
@@ -146,8 +149,16 @@ const function append_failed_details(
 			then failed.error_message
 			else message
 		table.insert(lines, ui.section(failed.name))
-		table.insert(lines, `  {ui.muted(location)}`)
-		table.insert(lines, `  {displayed_error:gsub('\n', '\n  ')}`)
+		if not is_suite_load_failure then
+			table.insert(lines, `  {ui.muted(location)}`)
+		end
+		const visible_error = if is_suite_load_failure
+			then displayed_error:gsub(
+				bundle_module_path,
+				suite_result.name
+			)
+			else displayed_error
+		table.insert(lines, `  {visible_error:gsub('\n', '\n  ')}`)
 		table.insert(lines, '')
 	end
 end
@@ -354,11 +365,11 @@ t.test(
 
 t.test('should preserve raw suite load errors', function()
 	const raw_error = table.concat({
-		'LutestBundle.tests.inventory:8: attempt to index nil with \'price\'',
-		'LutestBundle.tests.inventory:8 function __lutest_suite',
+		'LutestBundle.game.shared.inventory:8: attempt to index nil with \'price\'',
+		'LutestBundle.game.shared.inventory:8 function __lutest_suite',
 	}, '\n')
 	const output = format_run_result {
-		suite_result('tests/inventory.luau', {
+		suite_result('game/shared/inventory.luau', {
 			total_tests = 1,
 			passed_tests = 0,
 			failed_tests = 1,
@@ -366,27 +377,28 @@ t.test('should preserve raw suite load errors', function()
 			todo_tests = 0,
 		}, {
 			failed_test(
-				'load test suite: tests/inventory.luau',
+				'load test suite: game/shared/inventory.luau',
 				raw_error
 			),
 		}),
 	}
 
-	assert(output:find('tests/inventory.luau', 1, true) ~= nil)
+	assert(output:find('game/shared/inventory.luau', 1, true) ~= nil)
 	assert(
 		output:find(
-			'LutestBundle.tests.inventory:8: attempt to index nil with \'price\'',
+			'game/shared/inventory.luau:8: attempt to index nil with \'price\'',
 			1,
 			true
 		) ~= nil
 	)
 	assert(
 		output:find(
-			'LutestBundle.tests.inventory:8 function __lutest_suite',
+			'game/shared/inventory.luau:8 function __lutest_suite',
 			1,
 			true
 		) ~= nil
 	)
+	assert(output:find('LutestBundle', 1, true) == nil)
 end)
 
 t.test('should aggregate skipped counts across suites', function()
