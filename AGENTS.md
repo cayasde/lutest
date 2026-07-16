@@ -33,7 +33,9 @@ When reporting a newly opened pull request to the user, format the merge
 recommendation clearly with separate reasons to accept and reasons not to
 accept. Base both sections on an actual review of the diff and verification
 results, never intuition. Include only concrete risks, failing checks, or
-unverified behavior in the reasons not to accept.
+unverified behavior in the reasons not to accept. Report this recommendation
+and validation results in the chat, not in the pull request description. Keep
+the pull request description focused on the change summary and rationale.
 
 When the user asks to commit, determine whether the change belongs to the
 purpose of the current branch and its pull request. Commit and push it to that
