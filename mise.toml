@@ -11,6 +11,10 @@
 node = "24.15.0"
 "npm:pnpm" = "11.0.9"
 
+[tasks.setup]
+description = "Install project dependencies and Roblox type definitions"
+run = "lute run scripts/setup.luau"
+
 [tasks.format]
 description = "Format project Luau files with StyLua"
 run = "stylua ."
