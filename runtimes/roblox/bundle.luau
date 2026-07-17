@@ -116,7 +116,34 @@ const function manifest(files: { BundleFile }): string
 	})
 end
 
-const function bundled_library_files(): { BundleFile }
+const function package_bundle_path(relative_path: string): string
+	if relative_path == 'init.luau' then
+		return `__lutest_lib/{relative_path}`
+	end
+	return `__lutest_lib/init/{relative_path}`
+end
+
+const function bundled_library_files(library_root: string?): { BundleFile }
+	if library_root ~= nil then
+		const files = {} :: { BundleFile }
+		for _, relative_path in library.package_paths() do
+			const absolute = path_utils.normalize_path(
+				path.join(library_root, relative_path)
+			)
+			if not fs.exists(absolute) then
+				runtime_error(
+					'Missing file from supplied Roblox library package.',
+					`Expected '{relative_path}' under '{library_root}'.`
+				)
+			end
+			table.insert(files, {
+				absolute = absolute,
+				relative = package_bundle_path(relative_path),
+			})
+		end
+		return files
+	end
+
 	const files = {} :: { BundleFile }
 	for _, entry in library.files() do
 		const file: BundleFile = {
@@ -138,9 +165,10 @@ end
 
 const function all_bundle_files(
 	files: { BundleFile },
-	suite_paths: { string }
+	suite_paths: { string },
+	library_root: string?
 ): { BundleFile }
-	const bundled = bundled_library_files()
+	const bundled = bundled_library_files(library_root)
 	for _, file in files do
 		table.insert(bundled, {
 			absolute = file.absolute,
@@ -180,7 +208,11 @@ const function run_lune(
 	return result, run_error, ok
 end
 
-const function build(files: { BundleFile }, suite_paths: { string }): string
+const function build(
+	files: { BundleFile },
+	suite_paths: { string },
+	library_root: string?
+): string
 	if #files == 0 then
 		runtime_error 'Could not prepare an empty Roblox test bundle.'
 	end
@@ -190,7 +222,7 @@ const function build(files: { BundleFile }, suite_paths: { string }): string
 	const paths = bundle_paths()
 	fs.writeStringToFile(
 		paths.manifest,
-		manifest(all_bundle_files(files, suite_paths))
+		manifest(all_bundle_files(files, suite_paths, library_root))
 	)
 	if embedded_assets.bundle_script == '' then
 		runtime_error 'Missing embedded Roblox bundle script.'
@@ -226,6 +258,18 @@ t.test('should encode source files as a Lune bundle manifest', function()
 		},
 	}
 	assert(output:find('src/example.luau', 1, true) ~= nil)
+end)
+
+t.test('should nest package modules under the Wally entrypoint', function()
+	assert(package_bundle_path 'init.luau' == '__lutest_lib/init.luau')
+	assert(
+		package_bundle_path 'context.luau'
+			== '__lutest_lib/init/context.luau'
+	)
+	assert(
+		package_bundle_path 'core/executor.luau'
+			== '__lutest_lib/init/core/executor.luau'
+	)
 end)
 
 t.test(

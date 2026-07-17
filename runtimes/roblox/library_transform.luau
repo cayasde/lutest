@@ -147,8 +147,17 @@ const function files(
 	return output
 end
 
+const function package_paths(): { string }
+	const paths = {} :: { string }
+	for _, source_path in SOURCE_FILES do
+		table.insert(paths, output_path(source_path, 'package'))
+	end
+	return paths
+end
+
 return {
 	files = files,
+	package_paths = package_paths,
 	source_paths = source_paths,
 	transform_source = transform_source,
 }
