@@ -1,4 +1,4 @@
-local t = require(game:GetService('ReplicatedStorage').Packages.lutest)
+local t = require(game.ReplicatedStorage.Packages.lutest)
 
 local sequence = {}
 
