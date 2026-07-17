@@ -319,13 +319,13 @@
           </div>
           <div class="grid">
             <article class="full">
-              <header><h3>Failed run</h3><p>No global status banner</p></header>
+              <header><h3>Failed suite load</h3><p>Keep the original Roblox error and traceback</p></header>
               <pre><span class="failure strong">x 1 of 2 tests failed</span>
 
-<span class="accent">&gt; load test suite</span>
-  <span class="muted">game/client/hud.client.luau:11</span>
-  Remote test suites must be ModuleScripts.
-  <span class="muted">LocalScripts and Scripts do not run in a remote session.</span></pre>
+<span class="accent">&gt; load test suite: game/shared/inventory.luau</span>
+  game/shared/inventory.luau:8: attempt to index nil with 'price'
+  game/shared/inventory.luau:8 function __lutest_suite
+  <span class="muted">...</span></pre>
             </article>
             <article>
               <header><h3>Path error</h3><p>No echoed command or parser pointer</p></header>
