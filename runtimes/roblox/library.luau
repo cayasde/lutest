@@ -8,6 +8,10 @@ const function files(): { transform.LibraryFile }
 	return transform.files('bundle', embedded_assets.library)
 end
 
+const function package_paths(): { string }
+	return transform.package_paths()
+end
+
 t.test('should transform the package entry for a Roblox module tree', function()
 	const source = transform_source(
 		'lib/init.luau',
@@ -27,6 +31,16 @@ return registry
 	assert(source:find('require(script.context)', 1, true) ~= nil)
 	assert(source:find('@lutest_release', 1, true) == nil)
 	assert(source:find('self test', 1, true) == nil)
+end)
+
+t.test('should list the files required by a published package', function()
+	const paths = package_paths()
+	assert(#paths == 5)
+	assert(paths[1] == 'init.luau')
+	assert(paths[2] == 'context.luau')
+	assert(paths[3] == 'registry.luau')
+	assert(paths[4] == 'core/types.luau')
+	assert(paths[5] == 'core/executor.luau')
 end)
 
 t.test('should transform the bundle entry for sibling modules', function()
@@ -97,4 +111,5 @@ end)
 
 return {
 	files = files,
+	package_paths = package_paths,
 }

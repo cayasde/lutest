@@ -7,6 +7,7 @@ const output = require '@self/output'
 const progress = require '@self/progress'
 const protocol = require '@self/protocol'
 const config = require '@runtimes/lute/config'
+const process = require '@std/process'
 const t = require '@lutest_release'
 
 export type TestSuiteResult = protocol.TestSuiteResult
@@ -21,6 +22,12 @@ const function bundle_files(paths: { string }): { bundle.BundleFile }
 		table.insert(files, file)
 	end
 	return files
+end
+
+const function supplied_library_root(): string?
+	const root = process.env.LUTEST_ROBLOX_LIBRARY_ROOT
+	if type(root) ~= 'string' or root == '' then return nil end
+	return root
 end
 
 const function load_failures_as_results(
@@ -84,7 +91,8 @@ const function run(
 			credentials.load(),
 			bundle.build(
 				bundle_files(all_files),
-				discovery.relative_paths(suites)
+				discovery.relative_paths(suites),
+				supplied_library_root()
 			),
 			harness.generate {
 				require_path = `game.{discovery_config.require}`,

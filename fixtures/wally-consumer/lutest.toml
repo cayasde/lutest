@@ -1,0 +1,7 @@
+[discovery.roblox]
+require = "ReplicatedStorage.Packages.lutest"
+roots = ["tests"]
+
+[roblox]
+universe_id = 10460283574
+place_id = 87484847405188

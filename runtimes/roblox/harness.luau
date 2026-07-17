@@ -53,6 +53,7 @@ local function mount_bundled_library()
 		error("Lutest library was not present in the deserialized bundle.")
 	end
 	local entry = library:FindFirstChild("lib")
+	if entry == nil then entry = library:FindFirstChild("init") end
 	if entry == nil then
 		error("Lutest library entry module was not present in the deserialized bundle.")
 	end
@@ -194,6 +195,7 @@ t.test('should generate a harness that emits one versioned envelope', function()
 	)
 	assert(source:find('tests/example.luau', 1, true) ~= nil)
 	assert(source:find('entry.Name = segments[#segments]', 1, true) ~= nil)
+	assert(source:find('library:FindFirstChild("init")', 1, true) ~= nil)
 	assert(source:find('existing:Destroy()', 1, true) ~= nil)
 	assert(source:find('runtime_context.set_register', 1, true) ~= nil)
 	assert(source:find('suite executor', 1, true) ~= nil)

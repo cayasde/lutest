@@ -31,6 +31,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       inputs.publish)
     uses: ./.github/workflows/release-validation.yml
+    secrets: inherit
 
   publish:
     needs: validate
