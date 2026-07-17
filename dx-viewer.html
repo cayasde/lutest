@@ -248,18 +248,26 @@
           <div class="grid">
             <article class="full">
               <header><h3>Help</h3><p>Commands are the documentation</p></header>
-              <pre><span class="accent strong">Lutest</span> <span class="muted">Co-located tests for Luau modules.</span>
+              <pre><span class="accent strong">Lutest</span> <span class="muted">A modern test runner for Luau</span>
 
-<span class="accent strong">&gt; Commands</span>
-  test [paths...] [--runtime lute|roblox] [--config &lt;path&gt;] [--dry-run]
-  todo [paths...] [--runtime lute|roblox] [--config &lt;path&gt;] [--dry-run]
-  doctor [--config &lt;path&gt;]
-  debug bundle [paths...] [--runtime roblox] [--config &lt;path&gt;]
-  setup
-  version
+<span class="accent strong">&gt; Usage</span>
+  lutest &lt;command&gt; [options]
 
-<span class="accent strong">&gt; Try</span>
-  lutest test game --runtime roblox</pre>
+<span class="accent strong">&gt; Run tests</span>
+  test [paths...]   Run test suites.
+  todo [paths...]   List todo tests without running them.
+  debug bundle      Inspect the Roblox bundle without uploading it.
+
+<span class="accent strong">&gt; Project</span>
+  doctor            Check the project configuration and runtimes.
+  setup             Install project dependencies.
+  version           Print the installed Lutest version.
+
+<span class="accent strong">&gt; Shared options</span>
+  --runtime &lt;name&gt;  Select lute or roblox. <span class="muted">debug bundle: roblox only</span>
+                    Default: config or lute.
+  --config &lt;path&gt;   Read configuration from a specific file.
+  --dry-run          Discover test files without running them. <span class="muted">test, todo only</span></pre>
             </article>
             <article>
               <header><h3>Successful run</h3><p>A sentence, not a status banner</p></header>
