@@ -4,18 +4,26 @@ const t = require '@lutest_release'
 const function format_help(): string
 	return table.concat({
 		ui.accent.bold 'Lutest',
-		ui.muted 'Co-located tests for Luau modules.',
+		ui.muted 'A modern test runner for Luau',
 		'',
-		ui.section 'Commands',
-		'  test [paths...] [--runtime lute|roblox] [--config <path>] [--dry-run]',
-		'  todo [paths...] [--runtime lute|roblox] [--config <path>] [--dry-run]',
-		'  doctor [--config <path>]',
-		'  debug bundle [paths...] [--runtime roblox] [--config <path>]',
-		'  setup',
-		'  version',
+		ui.section 'Usage',
+		'  lutest <command> [options]',
 		'',
-		ui.section 'Try',
-		'  lutest test game --runtime roblox',
+		ui.section 'Run tests',
+		'  test [paths...]   Run test suites.',
+		'  todo [paths...]   List todo tests without running them.',
+		'  debug bundle      Inspect the Roblox bundle without uploading it.',
+		'',
+		ui.section 'Project',
+		'  doctor            Check the project configuration and runtimes.',
+		'  setup             Install project dependencies.',
+		'  version           Print the installed Lutest version.',
+		'',
+		ui.section 'Shared options',
+		'  --runtime <name>  Select lute or roblox. debug bundle: roblox only.',
+		'                    Default: config or lute.',
+		'  --config <path>   Read configuration from a specific file.',
+		'  --dry-run          Discover test files without running them. test, todo only.',
 	}, '\n')
 end
 
@@ -23,43 +31,34 @@ const function print_help()
 	print(format_help())
 end
 
-t.test('should format concise help with usage and examples', function()
+t.test('should format grouped command reference', function()
 	const output = format_help()
 
+	assert(output:find('A modern test runner for Luau', 1, true) ~= nil)
+	assert(output:find('> Usage', 1, true) ~= nil)
+	assert(output:find('> Run tests', 1, true) ~= nil)
+	assert(output:find('> Project', 1, true) ~= nil)
+	assert(output:find('> Shared options', 1, true) ~= nil)
+	assert(output:find('install-package', 1, true) == nil)
 	assert(
-		output:find('Co-located tests for Luau modules.', 1, true)
+		output:find('test [paths...]   Run test suites.', 1, true)
 			~= nil
 	)
-	assert(output:find('> Commands', 1, true) ~= nil)
-	assert(output:find('install-package', 1, true) == nil)
-	assert(output:find('setup', 1, true) ~= nil)
 	assert(
 		output:find(
-			'test [paths...] [--runtime lute|roblox] [--config <path>] [--dry-run]',
-			1,
-			true
-		) ~= nil
-	)
-	assert(output:find('doctor [--config <path>]', 1, true) ~= nil)
-	assert(
-		output:find(
-			'debug bundle [paths...] [--runtime roblox] [--config <path>]',
+			'debug bundle      Inspect the Roblox bundle without uploading it.',
 			1,
 			true
 		) ~= nil
 	)
 	assert(
 		output:find(
-			'todo [paths...] [--runtime lute|roblox] [--config <path>] [--dry-run]',
+			'--dry-run          Discover test files without running them. test, todo only.',
 			1,
 			true
 		) ~= nil
 	)
-	assert(output:find('version', 1, true) ~= nil)
-	assert(output:find('> Try', 1, true) ~= nil)
-	assert(output:find('lutest --help', 1, true) == nil)
-	assert(output:find('lutest test game --runtime roblox', 1, true) ~= nil)
-	assert(output:find('Description', 1, true) == nil)
+	assert(output:find('> Try', 1, true) == nil)
 end)
 
 return {
