@@ -116,6 +116,13 @@ const function manifest(files: { BundleFile }): string
 	})
 end
 
+const function package_bundle_path(relative_path: string): string
+	if relative_path == 'init.luau' then
+		return `__lutest_lib/{relative_path}`
+	end
+	return `__lutest_lib/init/{relative_path}`
+end
+
 const function bundled_library_files(library_root: string?): { BundleFile }
 	if library_root ~= nil then
 		const files = {} :: { BundleFile }
@@ -131,7 +138,7 @@ const function bundled_library_files(library_root: string?): { BundleFile }
 			end
 			table.insert(files, {
 				absolute = absolute,
-				relative = `__lutest_lib/{relative_path}`,
+				relative = package_bundle_path(relative_path),
 			})
 		end
 		return files
@@ -251,6 +258,18 @@ t.test('should encode source files as a Lune bundle manifest', function()
 		},
 	}
 	assert(output:find('src/example.luau', 1, true) ~= nil)
+end)
+
+t.test('should nest package modules under the Wally entrypoint', function()
+	assert(package_bundle_path 'init.luau' == '__lutest_lib/init.luau')
+	assert(
+		package_bundle_path 'context.luau'
+			== '__lutest_lib/init/context.luau'
+	)
+	assert(
+		package_bundle_path 'core/executor.luau'
+			== '__lutest_lib/init/core/executor.luau'
+	)
 end)
 
 t.test(
