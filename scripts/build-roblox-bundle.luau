@@ -43,6 +43,33 @@ local function script_class(relative_path)
 	return 'ModuleScript'
 end
 
+local function suite_runner_source()
+	return [[
+local suite = nil
+
+local function invoke()
+	local ok, value = xpcall(suite, debug.traceback)
+	if ok then
+		if value == nil then return true end
+		return value
+	end
+
+	return {
+		__lutest_suite_load_failure = true,
+		error_message = value,
+	}
+end
+
+return {
+	register = function(callback)
+		suite = callback
+	end,
+	load = invoke,
+	collect = invoke,
+}
+]]
+end
+
 local manifest_path = find_argument '--manifest'
 local output_path = find_argument '--output'
 local root_name = find_argument '--root-name' or 'LutestBundle'
@@ -87,24 +114,19 @@ for _, entry in manifest.files do
 		then entry.source
 		else fs.readFile(entry.absolute)
 	if entry.test_suite == true then
+		local runner = roblox.Instance.new 'ModuleScript'
+		runner.Name = '__lutest_suite_runner'
+		runner.Source = suite_runner_source()
+		runner.Parent = module
 		module.Source = [[
+local __lutest_suite_runner = require(script.__lutest_suite_runner)
 local function __lutest_suite()
 ]] .. module.Source .. [[
 
 end
 
-local __lutest_ok, __lutest_value = xpcall(__lutest_suite, debug.traceback)
-if __lutest_ok then
-	if __lutest_value == nil then
-		return true
-	end
-	return __lutest_value
-end
-
-return {
-	__lutest_suite_load_failure = true,
-	error_message = __lutest_value,
-}
+__lutest_suite_runner.register(__lutest_suite)
+return __lutest_suite_runner.load()
 ]]
 	end
 end
