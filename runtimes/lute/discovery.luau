@@ -144,6 +144,19 @@ const function is_luau_module(filepath: string): boolean
 	return stringext.hasSuffix(filepath, '.luau')
 end
 
+const function is_readable_file_link(
+	entry_type: fs.FileType,
+	filepath: string
+): boolean
+	if entry_type == 'file' then return true end
+	if entry_type ~= 'link' then return false end
+
+	const readable, _ = pcall(function()
+		fs.readFileToString(filepath)
+	end)
+	return readable
+end
+
 const function matches_test_require(
 	node: syntax.AstNode,
 	test_require_path: string
@@ -274,7 +287,9 @@ const function walk_directory(
 			continue
 		end
 
-		if entry.type ~= 'file' then continue end
+		if not is_readable_file_link(entry.type, entry_path) then
+			continue
+		end
 		add_file(
 			results,
 			seen,
@@ -427,7 +442,7 @@ const function discover_path(
 	end
 
 	const file_type = fs.type(resolved_path)
-	if file_type == 'file' then
+	if is_readable_file_link(file_type, resolved_path) then
 		add_file(
 			results,
 			seen,
@@ -531,7 +546,7 @@ const function walk_all_luau_files(
 			)
 			continue
 		end
-		if entry.type == 'file' then
+		if is_readable_file_link(entry.type, entry_path) then
 			add_luau_file(
 				results,
 				seen,
@@ -573,7 +588,12 @@ const function discover_all_files(
 				0
 			)
 		end
-		if fs.type(resolved_path) == 'file' then
+		if
+			is_readable_file_link(
+				fs.type(resolved_path),
+				resolved_path
+			)
+		then
 			add_luau_file(
 				discovered,
 				seen,
@@ -1417,6 +1437,45 @@ end)
 	assert(discovered[2] == later_module)
 
 	fs.removeDirectory(temp_cwd, { recursive = true })
+end)
+
+t.test('should discover a readable file symbolic link under a root', function()
+	const temp_root = path_utils.resolve_path(
+		path_utils.cwd(),
+		'dist/test-tmp/discovery-file-link'
+	)
+	const root = path_utils.normalize_path(path.join(temp_root, 'example'))
+	const source_path =
+		path_utils.normalize_path(path.join(temp_root, 'source.luau'))
+	const linked_path =
+		path_utils.normalize_path(path.join(root, 'shared.luau'))
+
+	if fs.exists(temp_root) then
+		fs.removeDirectory(temp_root, { recursive = true })
+	end
+
+	fs.createDirectory(root, { makeParents = true })
+	fs.writeStringToFile(source_path, 'return {}')
+	const linked, _ = pcall(function()
+		fs.symbolicLink(source_path, linked_path)
+	end)
+	if not linked then
+		fs.removeDirectory(temp_root, { recursive = true })
+		return
+	end
+
+	const discovered = discover_all_files({ root }, {
+		roots = { 'example' },
+		ignore = {},
+		require = '@lutest_release',
+		gitignore = false,
+	}, nil)
+
+	assert(#discovered == 1)
+	assert(discovered[1] == path_utils.normalize_path(linked_path))
+	assert(fs.readFileToString(discovered[1]) == 'return {}')
+
+	fs.removeDirectory(temp_root, { recursive = true })
 end)
 
 return {
