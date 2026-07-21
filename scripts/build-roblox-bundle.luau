@@ -46,26 +46,42 @@ end
 local function suite_runner_source()
 	return [[
 local suite = nil
+local runtime_context = nil
+local owner = nil
+local loaded = false
+local loaded_value = nil
 
-local function invoke()
-	local ok, value = xpcall(suite, debug.traceback)
-	if ok then
-		if value == nil then return true end
-		return value
+local function load()
+	if loaded then return loaded_value end
+	loaded = true
+	if runtime_context == nil then
+		error("Lutest suite runner was not configured.")
 	end
 
-	return {
+	local previous_owner = runtime_context.set_registration_owner(owner)
+	local ok, value = xpcall(suite, debug.traceback)
+	runtime_context.set_registration_owner(previous_owner)
+	if ok then
+		loaded_value = if value == nil then true else value
+		return loaded_value
+	end
+
+	loaded_value = {
 		__lutest_suite_load_failure = true,
 		error_message = value,
 	}
+	return loaded_value
 end
 
 return {
+	configure = function(next_context, next_owner)
+		runtime_context = next_context
+		owner = next_owner
+	end,
 	register = function(callback)
 		suite = callback
 	end,
-	load = invoke,
-	collect = invoke,
+	load = load,
 }
 ]]
 end

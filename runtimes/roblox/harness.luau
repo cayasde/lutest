@@ -127,6 +127,7 @@ end
 
 local output = { version = 1, results = {}, load_failures = {} }
 local prepared_suites = {}
+local prepared_by_module = {}
 
 local function append_load_failure(path, error_message)
 	table.insert(output.load_failures, {
@@ -146,20 +147,6 @@ for _, test_path in test_paths do
 		continue
 	end
 
-	local ok, loaded = xpcall(function()
-		return require(module)
-	end, debug.traceback)
-	if not ok then
-		append_load_failure(test_path, tostring(loaded))
-		continue
-	end
-	if
-		type(loaded) == "table"
-		and loaded.__lutest_suite_load_failure == true
-	then
-		append_load_failure(test_path, tostring(loaded.error_message))
-		continue
-	end
 	local runner_module = module:FindFirstChild("__lutest_suite_runner")
 	if runner_module == nil then
 		append_load_failure(test_path, "Test module did not expose a Lutest suite runner.")
@@ -168,27 +155,36 @@ for _, test_path in test_paths do
 	local runner_ok, runner = xpcall(function()
 		return require(runner_module)
 	end, debug.traceback)
-	if not runner_ok or type(runner) ~= "table" or type(runner.collect) ~= "function" then
+	if not runner_ok or type(runner) ~= "table" or type(runner.configure) ~= "function" then
 		append_load_failure(test_path, "Test module did not expose a valid Lutest suite runner.")
 		continue
 	end
-	table.insert(prepared_suites, {
+	local prepared = {
 		path = test_path,
+		module = module,
 		runner = runner,
-	})
+		tests = {},
+	}
+	runner.configure(runtime_context, module)
+	table.insert(prepared_suites, prepared)
+	prepared_by_module[module] = prepared
 end
 
+runtime_context.begin_session()
+runtime_context.set_register(function(spec)
+	local owner = runtime_context.get_registration_owner()
+	if owner == nil then return end
+
+	local prepared = prepared_by_module[owner]
+	if prepared == nil then return end
+
+	table.insert(prepared.tests, spec)
+end)
+
 for _, prepared in prepared_suites do
-	local tests = {}
-	runtime_context.begin_session()
-	runtime_context.set_register(function(spec)
-		table.insert(tests, spec)
-	end)
 	local ok, loaded = xpcall(function()
-		return prepared.runner.collect()
+		return require(prepared.module)
 	end, debug.traceback)
-	runtime_context.set_register(nil)
-	runtime_context.end_session()
 	if not ok then
 		append_load_failure(prepared.path, tostring(loaded))
 		continue
@@ -197,8 +193,17 @@ for _, prepared in prepared_suites do
 		append_load_failure(prepared.path, tostring(loaded.error_message))
 		continue
 	end
-	local suite_result = run_suite(prepared.path, tests) :: any
-	if #tests == 0 then
+	prepared.loaded = true
+end
+
+runtime_context.set_register(nil)
+runtime_context.end_session()
+
+for _, prepared in prepared_suites do
+	if not prepared.loaded then continue end
+
+	local suite_result = run_suite(prepared.path, prepared.tests) :: any
+	if #prepared.tests == 0 then
 		suite_result.warnings = {
 			prepared.path .. " was discovered as a test suite but registered no tests.",
 		}
@@ -228,7 +233,14 @@ t.test('should generate a harness that emits one versioned envelope', function()
 	assert(source:find('existing:Destroy()', 1, true) ~= nil)
 	assert(source:find('runtime_context.set_register', 1, true) ~= nil)
 	assert(source:find('local prepared_suites = {}', 1, true) ~= nil)
-	assert(source:find('prepared.runner.collect()', 1, true) ~= nil)
+	assert(
+		source:find(
+			'runner.configure(runtime_context, module)',
+			1,
+			true
+		) ~= nil
+	)
+	assert(source:find('prepared_by_module[owner]', 1, true) ~= nil)
 	assert(source:find('__lutest_suite_runner', 1, true) ~= nil)
 	assert(source:find('suite executor', 1, true) ~= nil)
 	assert(source:find('__lutest_suite_load_failure', 1, true) ~= nil)
